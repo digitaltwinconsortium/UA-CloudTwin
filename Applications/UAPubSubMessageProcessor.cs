@@ -13,12 +13,16 @@ namespace UACloudTwin
     using System.Diagnostics;
     using System.Linq;
     using System.Text;
+    using System.Threading;
 
     public class UAPubSubMessageProcessor : IUAPubSubMessageProcessor
     {
         private StatusHubClient _hubClient;
         private Dictionary<string, DataSetReaderDataType> _dataSetReaders;
-
+        private Timer _throughputTimer;
+        private int _messagesProcessed = 0;
+        private DateTime _currentTimestamp = DateTime.MinValue;
+        
         public UAPubSubMessageProcessor()
         {
             IServiceProvider serviceProvider = Program.AppHost.Services;
@@ -28,6 +32,14 @@ namespace UACloudTwin
             // add default dataset readers
             AddUadpDataSetReader("default_uadp", 0, new DataSetMetaDataType());
             AddJsonDataSetReader("default_json", 0, new DataSetMetaDataType());
+
+            _throughputTimer = new Timer(callback, null, 15 * 1000, 15 * 1000);
+        }
+
+        private void callback(object state)
+        {
+            Trace.TraceInformation("Processed " + _messagesProcessed / 15 + " messages/second, current message timestamp: " +_currentTimestamp.ToString());
+            _messagesProcessed = 0;
         }
 
         public void Clear()
@@ -40,14 +52,16 @@ namespace UACloudTwin
 
         public void ProcessMessage(byte[] payload, DateTime receivedTime, string contentType)
         {
+            _currentTimestamp = receivedTime;
             string message = string.Empty;
+
             try
             {
                 message = Encoding.UTF8.GetString(payload);
                 if (message != null)
                 {
 #if DEBUG
-                    Trace.TraceInformation($"Received Message {message}");
+                    //Trace.TraceInformation($"Received Message {message}");
 #endif
                     if (((contentType != null) && (contentType == "application/json")) || message.TrimStart().StartsWith('{') || message.TrimStart().StartsWith('['))
                     {
@@ -74,6 +88,10 @@ namespace UACloudTwin
             catch (Exception ex)
             {
                 Trace.TraceError($"Exception {ex.Message} processing message {message}");
+            }
+            finally
+            {
+                _messagesProcessed++;
             }
         }
 
@@ -185,6 +203,7 @@ namespace UACloudTwin
                 {
                     Message pubSubMessage = new Message();
                     pubSubMessage.Payload = new Dictionary<string, DataValue>();
+ 
                     if (datasetmessage.DataSet != null)
                     {
                         for (int i = 0; i < datasetmessage.DataSet.Fields.Count(); i++)
