@@ -27,11 +27,11 @@ namespace UACloudTwin
 
             if (!string.IsNullOrEmpty(Configuration["USE_MQTT"]))
             {
-                services.AddScoped<ISubscriber, MQTTSubscriber>();
+                services.AddSingleton<ISubscriber, MQTTSubscriber>();
             }
             else
             {
-                services.AddScoped<ISubscriber, KafkaSubscriber>();
+                services.AddSingleton<ISubscriber, KafkaSubscriber>();
             }
         }
 

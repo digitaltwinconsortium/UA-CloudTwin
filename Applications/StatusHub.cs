@@ -13,7 +13,7 @@ namespace UACloudTwin
     }
 
     public class StatusHubClient
-    { 
+    {
         public Dictionary<string, Tuple<string, string>> TableEntries { get; set; } = new Dictionary<string, Tuple<string, string>>();
 
         public Dictionary<string, string[]> ChartEntries { get; set; } = new Dictionary<string, string[]>();

@@ -17,6 +17,10 @@
     {
       "library": "bootstrap-table@1.18.3",
       "destination": "wwwroot/lib/bootstrap-table/"
+    },
+    {
+      "library": "Chart.js@3.9.1",
+      "destination": "wwwroot/js/Chart.js/"
     }
   ]
 }
