@@ -13,20 +13,20 @@ namespace UACloudTwin
     using System.Diagnostics;
     using System.Linq;
     using System.Text;
+    using UACloudTwin.Interfaces;
     using System.Threading;
 
-    public class UAPubSubMessageProcessor : IUAPubSubMessageProcessor
+    public class UAPubSubMessageProcessor : IMessageProcessor
     {
         private StatusHubClient _hubClient;
         private Dictionary<string, DataSetReaderDataType> _dataSetReaders;
         private Timer _throughputTimer;
         private int _messagesProcessed = 0;
         private DateTime _currentTimestamp = DateTime.MinValue;
-        
-        public UAPubSubMessageProcessor()
+
+        public UAPubSubMessageProcessor(IHubContext<StatusHub> hubContext)
         {
-            IServiceProvider serviceProvider = Program.AppHost.Services;
-            _hubClient = new StatusHubClient((IHubContext<StatusHub>)serviceProvider.GetService(typeof(IHubContext<StatusHub>)));
+            _hubClient = new StatusHubClient(hubContext);
             _dataSetReaders = new Dictionary<string, DataSetReaderDataType>();
 
             // add default dataset readers
@@ -203,7 +203,7 @@ namespace UACloudTwin
                 {
                     Message pubSubMessage = new Message();
                     pubSubMessage.Payload = new Dictionary<string, DataValue>();
- 
+
                     if (datasetmessage.DataSet != null)
                     {
                         for (int i = 0; i < datasetmessage.DataSet.Fields.Count(); i++)

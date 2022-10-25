@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using UACloudTwin.Interfaces;
 
 namespace UACloudTwin
 {
@@ -22,11 +23,20 @@ namespace UACloudTwin
 
             services.AddSignalR();
 
-            services.AddSingleton<IUAPubSubMessageProcessor, UAPubSubMessageProcessor>();
+            services.AddSingleton<IMessageProcessor, UAPubSubMessageProcessor>();
+
+            if (!string.IsNullOrEmpty(Configuration["USE_MQTT"]))
+            {
+                services.AddScoped<ISubscriber, MQTTSubscriber>();
+            }
+            else
+            {
+                services.AddScoped<ISubscriber, KafkaSubscriber>();
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ISubscriber subscriber)
         {
             if (env.IsDevelopment())
             {
@@ -55,6 +65,8 @@ namespace UACloudTwin
                     pattern: "{controller=ADT}/{action=Index}/{id?}");
                 endpoints.MapHub<StatusHub>("/statushub");
             });
+
+            subscriber.Connect();
         }
     }
 }

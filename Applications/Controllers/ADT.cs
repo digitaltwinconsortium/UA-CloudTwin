@@ -18,15 +18,6 @@ namespace UACloudTwin.Controllers
                 StatusMessage = ""
             };
 
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_MQTT")))
-            {
-                MQTTSubscriber.Connect();
-            }
-            else
-            {
-                KafkaSubscriber.Connect();
-            }
-
             return View("Index", adtModel);
         }
 

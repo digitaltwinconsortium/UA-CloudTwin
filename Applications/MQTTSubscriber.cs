@@ -14,18 +14,22 @@ namespace UACloudTwin
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using UACloudTwin.Interfaces;
 
-    public class MQTTSubscriber
+    public class MQTTSubscriber : ISubscriber
     {
-        private static IMqttClient _client = null;
-        private static IUAPubSubMessageProcessor _uaMessageProcessor;
+        private IMqttClient _client = null;
+        private IMessageProcessor _uaMessageProcessor;
 
-        public static void Connect()
+        public MQTTSubscriber(IMessageProcessor uaMessageProcessor)
+        {
+            _uaMessageProcessor = uaMessageProcessor;
+        }
+
+        public void Connect()
         {
             try
             {
-                _uaMessageProcessor = (IUAPubSubMessageProcessor)Program.AppHost.Services.GetService(typeof(IUAPubSubMessageProcessor));
-
                 // disconnect if still connected
                 if ((_client != null) && _client.IsConnected)
                 {
@@ -106,7 +110,7 @@ namespace UACloudTwin
             }
         }
 
-        private static MqttApplicationMessage BuildResponse(string status, string id, string responseTopic, byte[] payload)
+        private MqttApplicationMessage BuildResponse(string status, string id, string responseTopic, byte[] payload)
         {
             return new MqttApplicationMessageBuilder()
                 .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
@@ -116,7 +120,7 @@ namespace UACloudTwin
         }
 
         // parses status from packet properties
-        private static int? GetStatus(List<MqttUserProperty> properties)
+        private int? GetStatus(List<MqttUserProperty> properties)
         {
             var status = properties.FirstOrDefault(up => up.Name == "status");
             if (status == null)
@@ -128,7 +132,7 @@ namespace UACloudTwin
         }
 
         // handles all incoming messages
-        private static async Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs args)
+        private async Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs args)
         {
             Trace.TraceInformation($"Received message from topic: {args.ApplicationMessage.Topic}");
 

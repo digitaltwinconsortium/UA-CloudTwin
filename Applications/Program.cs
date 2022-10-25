@@ -5,12 +5,9 @@ namespace UACloudTwin
 {
     public class Program
     {
-        public static IHost AppHost { get; set; }
-
         public static void Main(string[] args)
         {
-            AppHost = CreateHostBuilder(args).Build();
-            AppHost.Run();
+            CreateHostBuilder(args).Build().Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

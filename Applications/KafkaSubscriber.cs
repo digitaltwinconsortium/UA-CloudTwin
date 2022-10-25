@@ -7,95 +7,90 @@ namespace UACloudTwin
     using System.Diagnostics;
     using System.Text;
     using System.Threading.Tasks;
+    using UACloudTwin.Interfaces;
 
-    public class KafkaSubscriber
+    public class KafkaSubscriber : ISubscriber
     {
-        private static IConsumer<Ignore, byte[]> _consumer = null;
-        private static IUAPubSubMessageProcessor _uaMessageProcessor;
+        private IConsumer<Ignore, byte[]> _consumer = null;
+        private IMessageProcessor _uaMessageProcessor;
 
-        public static void Connect()
+        public KafkaSubscriber(IMessageProcessor uaMessageProcessor)
         {
-            _ = Task.Run(() =>
+            _uaMessageProcessor = uaMessageProcessor;
+        }
+
+        public void Connect()
+        {
+            try
             {
-                try
+                // disconnect if still connected
+                if (_consumer != null)
                 {
-                    _uaMessageProcessor = (IUAPubSubMessageProcessor)Program.AppHost.Services.GetService(typeof(IUAPubSubMessageProcessor));
+                    _consumer.Close();
+                    _consumer.Dispose();
+                    _consumer = null;
+                }
 
-                    // disconnect if still connected
-                    if (_consumer != null)
+                // create Kafka client
+                var conf = new ConsumerConfig
+                {
+                    GroupId = "consumer-group",
+                    BootstrapServers = Environment.GetEnvironmentVariable("BROKER_NAME") + ":" + Environment.GetEnvironmentVariable("BROKER_PORT"),
+                    // Note: The AutoOffsetReset property determines the start offset in the event
+                    // there are not yet any committed offsets for the consumer group for the
+                    // topic/partitions of interest. By default, offsets are committed
+                    // automatically, so in this example, consumption will only start from the
+                    // earliest message in the topic 'my-topic' the first time you run the program.
+                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                    SecurityProtocol = SecurityProtocol.SaslSsl,
+                    SaslMechanism = SaslMechanism.Plain,
+                    SaslUsername = Environment.GetEnvironmentVariable("USERNAME"),
+                    SaslPassword = Environment.GetEnvironmentVariable("PASSWORD")
+                };
+
+                _consumer = new ConsumerBuilder<Ignore, byte[]>(conf).Build();
+
+                _consumer.Subscribe(Environment.GetEnvironmentVariable("TOPIC"));
+
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("METADATA_TOPIC")))
+                {
+                    _consumer.Subscribe(new List<string>() {
+                        Environment.GetEnvironmentVariable("TOPIC"),
+                        Environment.GetEnvironmentVariable("METADATA_TOPIC")
+                    });
+                }
+
+                Trace.TraceInformation("Connected to Kafka broker.");
+
+                _ = Task.Run(() =>
+                {
+                    while (true)
                     {
-                        _consumer.Close();
-                        _consumer.Dispose();
-                        _consumer = null;
-                    }
+                        ConsumeResult<Ignore, byte[]> result = _consumer.Consume();
 
-                    // create Kafka client
-                    var conf = new ConsumerConfig
-                    {
-                        GroupId = "consumer-group",
-                        BootstrapServers = Environment.GetEnvironmentVariable("BROKER_NAME") + ":" + Environment.GetEnvironmentVariable("BROKER_PORT"),
-                        // Note: The AutoOffsetReset property determines the start offset in the event
-                        // there are not yet any committed offsets for the consumer group for the
-                        // topic/partitions of interest. By default, offsets are committed
-                        // automatically, so in this example, consumption will only start from the
-                        // earliest message in the topic 'my-topic' the first time you run the program.
-                        AutoOffsetReset = AutoOffsetReset.Earliest,
-                        SecurityProtocol = SecurityProtocol.SaslSsl,
-                        SaslMechanism = SaslMechanism.Plain,
-                        SaslUsername = Environment.GetEnvironmentVariable("USERNAME"),
-                        SaslPassword = Environment.GetEnvironmentVariable("PASSWORD")
-                    };
-
-                    _consumer = new ConsumerBuilder<Ignore, byte[]>(conf).Build();
-
-                    _consumer.Subscribe(Environment.GetEnvironmentVariable("TOPIC"));
-
-                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("METADATA_TOPIC")))
-                    {
-                        _consumer.Subscribe(new List<string>() {
-                            Environment.GetEnvironmentVariable("TOPIC"),
-                            Environment.GetEnvironmentVariable("METADATA_TOPIC")
-                        });
-                    }
-
-                    Trace.TraceInformation("Connected to Kafka broker.");
-
-                    bool error = false;
-                    while (!error)
-                    {
-                        try
+                        if (result.Message != null)
                         {
-                            ConsumeResult<Ignore, byte[]> result = _consumer.Consume();
-
-                            if (result.Message != null)
+                            string contentType = "application/json";
+                            if (result.Message.Headers != null && result.Message.Headers.Count > 0)
                             {
-                                string contentType = "application/json";
-                                if (result.Message.Headers != null && result.Message.Headers.Count > 0)
+                                foreach (var header in result.Message.Headers)
                                 {
-                                    foreach (var header in result.Message.Headers)
+                                    if (header.Key.Equals("Content-Type"))
                                     {
-                                        if (header.Key.Equals("Content-Type"))
-                                        {
-                                            contentType = Encoding.UTF8.GetString(header.GetValueBytes());
-                                        }
+                                        contentType = Encoding.UTF8.GetString(header.GetValueBytes());
                                     }
                                 }
-
-                                _uaMessageProcessor.ProcessMessage(result.Message.Value, result.Message.Timestamp.UtcDateTime, contentType);
                             }
-                        }
-                        catch (Exception ex)
-                        {
-                            Trace.TraceError(ex.Message);
-                            error = true;
+
+                            _uaMessageProcessor.ProcessMessage(result.Message.Value, result.Message.Timestamp.UtcDateTime, contentType);
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceError("Failed to connect to Kafka broker: " + ex.Message);
-                }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError(ex.Message);
+            }
         }
     }
 }
