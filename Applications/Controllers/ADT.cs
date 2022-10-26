@@ -3,13 +3,21 @@ using Azure.DigitalTwins.Core;
 using Azure.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using UACloudTwin.Interfaces;
 using UACloudTwin.Models;
 
 namespace UACloudTwin.Controllers
 {
     public class ADT : Controller
     {
+        private readonly ISubscriber _subscriber;
+
         public static DigitalTwinsClient ADTClient { get; private set; } = null;
+
+        public ADT(ISubscriber subscriber)
+        {
+            _subscriber = subscriber;
+        }
 
         public ActionResult Index()
         {
@@ -27,38 +35,40 @@ namespace UACloudTwin.Controllers
         }
 
         [HttpPost]
-        public ActionResult Upload(string instanceUrl, string tenantId, string clientId, string secret)
+        public ActionResult Login(string instanceUrl, string endpoint)
         {
-            ADTModel adtModel = new ADTModel
-            {
-                InstanceUrl = instanceUrl,
-                TenantId = tenantId,
-                ClientId = clientId,
-                Secret = secret
-            };
-
             try
             {
-                // login to Azure using the Environment variables mechanism of DefaultAzureCredential
-                Environment.SetEnvironmentVariable("AZURE_CLIENT_ID", clientId);
-                Environment.SetEnvironmentVariable("AZURE_TENANT_ID", tenantId);
-                Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", secret);
+                ADTClient = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential(true));
 
-                // create ADT client instance
-                ADTClient = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential(new DefaultAzureCredentialOptions{ ExcludeVisualStudioCodeCredential = true }));
+                if (!string.IsNullOrEmpty(endpoint))
+                {
+                    string[] parts = endpoint.Split(';');
 
-                // clear secret
-                Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", "");
+                    Environment.SetEnvironmentVariable("USERNAME", "$ConnectionString");
+                    Environment.SetEnvironmentVariable("PASSWORD", endpoint);
+                    Environment.SetEnvironmentVariable("BROKER_PORT", "9093");
+                    Environment.SetEnvironmentVariable("CLIENT_NAME", "microsoft");
+                    Environment.SetEnvironmentVariable("BROKER_NAME", parts[0].Substring(parts[0].IndexOf('=') + 6).TrimEnd('/'));
+                    Environment.SetEnvironmentVariable("TOPIC", parts[3].Substring(parts[3].IndexOf('=') + 1));
+                }
 
-                adtModel.StatusMessage = "Login successful!";
+                _subscriber.Connect();
+
+                ADTModel adtModel = new ADTModel
+                {
+                    StatusMessage = "Login to ADT service and connection to broker successful!"
+                };
+
                 return View("Index", adtModel);
             }
             catch (Exception ex)
             {
-                // clear secret
-                Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", "");
+                ADTModel adtModel = new ADTModel
+                {
+                    StatusMessage = ex.Message
+                };
 
-                adtModel.StatusMessage = ex.Message;
                 return View("Index", adtModel);
             }
         }

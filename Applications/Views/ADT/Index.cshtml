@@ -3,34 +3,25 @@
 @model ADTModel
 
 @{
-    ViewData["Title"] = "Azure Digital Twins Service Connection";
+    ViewData["Title"] = "Setup";
 }
 <h1>@ViewData["Title"]</h1>
 
 <div class="row browser_top_container">
-    @using (Html.BeginForm("Upload", "ADT"))
+    @using (Html.BeginForm("Login", "ADT"))
     {
     <div class="browser_connect_selection_textbox">
         <p>
-            You first need to register this application with Azure Digital Twins (ADT) service, see <a href="https://docs.microsoft.com/en-us/azure/digital-twins/how-to-create-app-registration" target="_blank" rel="noopener noreferrer">here</a>.<br />
-            You also need to create a secret as a client credential within your app registration.<br />
-            Also, ensure you add "Azure Digital Twins Data Owner" permissions to your app registration.<br />
+            This app sits between an Azure IoT/Event Hub and an Azure Digital Twins service and translates OPC UA messages to digital twins.<br/>
+            <b>Please ensure you have enabled and added this app's managed identity to the "Azure Digital Twins Data Owner" role permissions of your ADT service instance!</b><br />
         </p>
         <p>
-            ADT instance Url (format: https://YourADTInstanceName.api.wcus.digitaltwins.azure.net)<br />
+            Azure Digital Twins service instance Url (format: https://YourADTInstanceName.api.YourAzureRegionName.digitaltwins.azure.net)<br />
             @Html.TextBox("instanceUrl", null, new { style = "width:100%;" })<br />
         <p />
         <p>
-            Azure Subscription Tenant ID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)<br />
-            @Html.TextBox("tenantId", null, new { style = "width:100%;" })<br />
-        <p />
-        <p>
-            Registered application ID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)<br />
-            @Html.TextBox("clientId", null, new { style = "width:100%;" })<br />
-        <p />
-        <p>
-            Secret you created for your app registration (found under "Client credentials")<br />
-            @Html.Password("secret", null, new { style = "width:100%;" })<br />
+            Azure Event Hub connection string (format: Endpoint=sb://theNamespace.servicebus.windows.net/;SharedAccessKeyName=theName;SharedAccessKey=theKey;EntityPath=theTopic)<br />
+            @Html.TextBox("endpoint", null, new { style = "width:100%;" })<br />
         <p />
         <p>
             <input id="uploadButton" class="btn btn-primary btn_browser" type="submit" value="Connect">
