@@ -4,6 +4,7 @@ namespace UACloudTwin
     using Microsoft.AspNetCore.SignalR;
     using System;
     using System.Collections.Generic;
+    using System.Collections.Immutable;
     using System.Text;
     using System.Threading.Tasks;
 
@@ -61,11 +62,11 @@ namespace UACloudTwin
             sb.Append("<tr>");
             sb.Append("<th><b>Name</b></th>");
             sb.Append("<th><b>Latest Value</b></th>");
-            sb.Append("<th><b>Time Stamp</b></th>");
+            sb.Append("<th><b>Time Stamp (UTC)</b></th>");
             sb.Append("</tr>");
 
             // rows
-            foreach (KeyValuePair<string, Tuple<string, string>> item in TableEntries)
+            foreach (KeyValuePair<string, Tuple<string, string>> item in TableEntries.ToImmutableSortedDictionary())
             {
                 sb.Append("<tr>");
                 sb.Append("<td style='width:400px'>" + item.Key + "</td>");

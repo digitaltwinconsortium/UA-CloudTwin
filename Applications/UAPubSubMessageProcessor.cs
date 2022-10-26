@@ -190,7 +190,7 @@ namespace UACloudTwin
                     }
                     else
                     {
-                        _hubClient.TableEntries.TryAdd(assetName, new Tuple<string, string>("OPC UA asset", receivedTime.ToString()));
+                        _hubClient.TableEntries.Add(assetName, new Tuple<string, string>("OPC UA asset", receivedTime.ToString()));
                     }
                 }
             }
@@ -222,7 +222,7 @@ namespace UACloudTwin
                 _dataSetReaders["default_uadp:0"].DataSetMetaData.Fields.Clear();
                 _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
 
-                string publisherID = string.Empty;
+                string publisherID;
                 if (encodedMessage is JsonNetworkMessage)
                 {
                     publisherID = ((JsonNetworkMessage)encodedMessage).PublisherId?.ToString();
@@ -232,13 +232,10 @@ namespace UACloudTwin
                     publisherID = ((UadpNetworkMessage)encodedMessage).PublisherId?.ToString();
                 }
 
-                OpcUaPubSubMessageModel publisherMessage = new OpcUaPubSubMessageModel();
-                publisherMessage.Messages = new List<Message>();
+                // now flatten any complex types
+                Dictionary<string, DataValue> flattenedPublishedNodes = new();
                 foreach (UaDataSetMessage datasetmessage in encodedMessage.DataSetMessages)
                 {
-                    Message pubSubMessage = new Message();
-                    pubSubMessage.Payload = new Dictionary<string, DataValue>();
-
                     if (datasetmessage.DataSet != null)
                     {
                         for (int i = 0; i < datasetmessage.DataSet.Fields.Count(); i++)
@@ -259,12 +256,12 @@ namespace UACloudTwin
                                         foreach (Variant variant in (Variant[])field.Value.WrappedValue.Value)
                                         {
                                             string[] keyValue = (string[])variant.Value;
-                                            pubSubMessage.Payload.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_field" + (i + 1).ToString() + "_" + keyValue[0], new DataValue(new Variant(keyValue[1])));
+                                            flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_field" + (i + 1).ToString() + "_" + keyValue[0], new DataValue(new Variant(keyValue[1])));
                                         }
                                     }
                                     else
                                     {
-                                        pubSubMessage.Payload.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_field" + (i + 1).ToString(), field.Value);
+                                        flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_field" + (i + 1).ToString(), field.Value);
                                     }
                                 }
                                 else
@@ -279,12 +276,12 @@ namespace UACloudTwin
                                                 string[] keyValue = (string[])variant.Value;
                                                 if (keyValue != null)
                                                 {
-                                                    pubSubMessage.Payload.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + keyValue[0] + "_" + j.ToString(), new DataValue(new Variant(keyValue[1])));
+                                                    flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + keyValue[0] + "_" + j.ToString(), new DataValue(new Variant(keyValue[1])));
                                                 }
                                             }
                                             else
                                             {
-                                                pubSubMessage.Payload.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + j.ToString(), new DataValue(new Variant(variant.Value.ToString())));
+                                                flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + j.ToString(), new DataValue(new Variant(variant.Value.ToString())));
                                             }
 
                                             j++;
@@ -292,68 +289,69 @@ namespace UACloudTwin
                                     }
                                     else
                                     {
-                                        pubSubMessage.Payload.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_field" + (i + 1).ToString(), field.Value);
+                                        string key = publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_field" + (i + 1).ToString();
+                                        if (flattenedPublishedNodes.ContainsKey(key))
+                                        {
+                                            flattenedPublishedNodes[key] = field.Value;
+                                        }
+                                        else
+                                        {
+                                            flattenedPublishedNodes.Add(key, field.Value);
+                                        }
                                     }
                                 }
 
                             }
                         }
-
-                        publisherMessage.Messages.Add(pubSubMessage);
                     }
                 }
 
-                ProcessPublisherMessage(publisherMessage, receivedTime);
+                SendPublishedNodesToADT(flattenedPublishedNodes, receivedTime);
             }
         }
 
-        private void ProcessPublisherMessage(OpcUaPubSubMessageModel publisherMessage, DateTime enqueueTime)
+        private void SendPublishedNodesToADT(Dictionary<string, DataValue> publishedNodes, DateTime enqueueTime)
         {
             Dictionary<string, string> displayNameMap = new Dictionary<string, string>(); // TODO: Add display name substitudes here!
 
-            // unbatch the received data
-            if (publisherMessage.Messages != null)
+            foreach (string nodeId in publishedNodes.Keys)
             {
-                foreach (Message message in publisherMessage.Messages)
+                // substitude the node Id with a custom display name, if available
+                string displayName = nodeId;
+                try
                 {
-                    foreach (string nodeId in message.Payload.Keys)
+                    if (displayNameMap.Count > 0)
                     {
-                        // substitude the node Id with a custom display name, if available
-                        string displayName = nodeId;
-                        try
-                        {
-                            if (displayNameMap.Count > 0)
-                            {
-                                displayName = displayNameMap[nodeId];
-                            }
-                        }
-                        catch
-                        {
-                            // keep the original node ID as the display name
-                        }
+                        displayName = displayNameMap[nodeId];
+                    }
+                }
+                catch
+                {
+                    // keep the original node ID as the display name
+                }
 
-                        if (message.Payload[nodeId] != null)
-                        {
-                            if (message.Payload[nodeId].SourceTimestamp == DateTime.MinValue)
-                            {
-                                // use the enqueued time if the OPC UA timestamp is not present
-                                message.Payload[nodeId].SourceTimestamp = enqueueTime;
-                            }
+                if (publishedNodes[nodeId] != null)
+                {
+                    if (publishedNodes[nodeId].SourceTimestamp == DateTime.MinValue)
+                    {
+                        // use the enqueued time if the OPC UA timestamp is not present
+                        publishedNodes[nodeId].SourceTimestamp = enqueueTime;
+                    }
 
-                            try
-                            {
-                                string timeStamp = message.Payload[nodeId].SourceTimestamp.ToString();
-                                if (message.Payload[nodeId].Value != null)
-                                {
-                                    string value = message.Payload[nodeId].Value.ToString();
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                // ignore this item
-                                Trace.TraceInformation($"Cannot add item {nodeId}: {ex.Message}");
-                            }
+                    try
+                    {
+                        string timeStamp = publishedNodes[nodeId].SourceTimestamp.ToString();
+                        if (publishedNodes[nodeId].Value != null)
+                        {
+                            string value = publishedNodes[nodeId].Value.ToString();
+
+                            //TODO: Update ADT twin properties for each published node
                         }
+                    }
+                    catch (Exception ex)
+                    {
+                        // ignore this item
+                        Trace.TraceInformation($"Cannot add item {nodeId}: {ex.Message}");
                     }
                 }
             }
