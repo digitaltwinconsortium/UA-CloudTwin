@@ -4,7 +4,6 @@ namespace UACloudTwin
     using Microsoft.AspNetCore.SignalR;
     using Newtonsoft.Json;
     using Opc.Ua;
-    using UACloudTwin.Models;
     using Opc.Ua.PubSub;
     using Opc.Ua.PubSub.Encoding;
     using Opc.Ua.PubSub.PublishedData;
@@ -13,8 +12,8 @@ namespace UACloudTwin
     using System.Diagnostics;
     using System.Linq;
     using System.Text;
-    using UACloudTwin.Interfaces;
     using System.Threading;
+    using UACloudTwin.Interfaces;
 
     public class UAPubSubMessageProcessor : IMessageProcessor
     {
@@ -23,6 +22,7 @@ namespace UACloudTwin
         private Timer _throughputTimer;
         private int _messagesProcessed = 0;
         private DateTime _currentTimestamp = DateTime.MinValue;
+        private string _chartCategory = "OPC UA PubSub Messages Per Second Processed";
 
         public UAPubSubMessageProcessor(IHubContext<StatusHub> hubContext)
         {
@@ -33,12 +33,56 @@ namespace UACloudTwin
             AddUadpDataSetReader("default_uadp", 0, new DataSetMetaDataType(), DateTime.UtcNow);
             AddJsonDataSetReader("default_json", 0, new DataSetMetaDataType(), DateTime.UtcNow);
 
-            _throughputTimer = new Timer(callback, null, 15 * 1000, 15 * 1000);
+            _throughputTimer = new Timer(MessagesProcessedCalculation, null, 10000, 10000);
+
+            lock (_hubClient.ChartCategoryEntries)
+            {
+                if (_hubClient.ChartCategoryEntries.ContainsKey(_chartCategory))
+                {
+                    _hubClient.ChartCategoryEntries[_chartCategory] = new Tuple<string, string>(_chartCategory, "0");
+                }
+                else
+                {
+                    _hubClient.ChartCategoryEntries.Add(_chartCategory, new Tuple<string, string>(_chartCategory, "0"));
+                }
+            }
         }
 
-        private void callback(object state)
+        private void MessagesProcessedCalculation(object state)
         {
-            Trace.TraceInformation("Processed " + _messagesProcessed / 15 + " messages/second, current message timestamp: " +_currentTimestamp.ToString());
+            string messagesPerSecondProcessed = (_messagesProcessed / 10).ToString();
+            string timeStamp = _currentTimestamp.ToString();
+            Trace.TraceInformation("Processed " + messagesPerSecondProcessed + " messages/second, current message timestamp: " + timeStamp);
+
+            lock (_hubClient.ChartEntries)
+            {
+                // create a keys array as index from our display names
+                List<string> keys = new List<string>();
+                foreach (string displayNameAsKey in _hubClient.ChartCategoryEntries.Keys)
+                {
+                    keys.Add(displayNameAsKey);
+                }
+
+                // check if we have to create an initially blank entry first
+                if (!_hubClient.ChartEntries.ContainsKey(timeStamp) || (keys.Count != _hubClient.ChartEntries[timeStamp].Length))
+                {
+                    string[] blankValues = new string[_hubClient.ChartCategoryEntries.Count];
+                    for (int i = 0; i < blankValues.Length; i++)
+                    {
+                        blankValues[i] = "NaN";
+                    }
+
+                    if (_hubClient.ChartEntries.ContainsKey(timeStamp))
+                    {
+                        _hubClient.ChartEntries.Remove(timeStamp);
+                    }
+
+                    _hubClient.ChartEntries.Add(timeStamp, blankValues);
+                }
+
+                _hubClient.ChartEntries[timeStamp][keys.IndexOf(_chartCategory)] = messagesPerSecondProcessed;
+            }
+
             _messagesProcessed = 0;
         }
 

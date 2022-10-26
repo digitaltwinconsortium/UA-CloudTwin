@@ -17,6 +17,8 @@ namespace UACloudTwin
     {
         public Dictionary<string, Tuple<string, string>> TableEntries { get; set; } = new Dictionary<string, Tuple<string, string>>();
 
+        public Dictionary<string, Tuple<string, string>> ChartCategoryEntries { get; set; } = new Dictionary<string, Tuple<string, string>>();
+
         public Dictionary<string, string[]> ChartEntries { get; set; } = new Dictionary<string, string[]>();
 
         private readonly IHubContext<StatusHub> _hubContext;
@@ -36,7 +38,7 @@ namespace UACloudTwin
 
                 lock (TableEntries)
                 {
-                    foreach (string displayName in TableEntries.Keys)
+                    foreach (string displayName in ChartCategoryEntries.Keys)
                     {
                         _hubContext.Clients.All.SendAsync("addDatasetToChart", displayName).GetAwaiter().GetResult();
                     }
@@ -60,8 +62,7 @@ namespace UACloudTwin
 
             // header
             sb.Append("<tr>");
-            sb.Append("<th><b>Name</b></th>");
-            sb.Append("<th><b>Latest Value</b></th>");
+            sb.Append("<th><b>Discovered Asset Name</b></th>");
             sb.Append("<th><b>Time Stamp (UTC)</b></th>");
             sb.Append("</tr>");
 
@@ -70,7 +71,6 @@ namespace UACloudTwin
             {
                 sb.Append("<tr>");
                 sb.Append("<td style='width:400px'>" + item.Key + "</td>");
-                sb.Append("<td style='width:400px'>" + item.Value.Item1 + "</td>");
                 sb.Append("<td style='width:200px'>" + item.Value.Item2 + "</td>");
                 sb.Append("</tr>");
             }
