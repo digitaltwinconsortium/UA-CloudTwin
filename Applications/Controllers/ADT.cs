@@ -3,14 +3,14 @@ using Azure.DigitalTwins.Core;
 using Azure.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using UACloudTwin.Models;
 
 namespace UACloudTwin.Controllers
 {
     public class ADT : Controller
     {
+        public static DigitalTwinsClient ADTClient { get; private set; } = null;
+
         public ActionResult Index()
         {
             ADTModel adtModel = new ADTModel
@@ -45,31 +45,13 @@ namespace UACloudTwin.Controllers
                 Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", secret);
 
                 // create ADT client instance
-                DigitalTwinsClient client = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential(new DefaultAzureCredentialOptions{ ExcludeVisualStudioCodeCredential = true }));
-
-                // read generated DTDL models
-                List<string> dtdlModels = new List<string>();
-                foreach (string dtdlFilePath in Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(),"JSON"), "*.dtdl.json"))
-                {
-                    dtdlModels.Add(System.IO.File.ReadAllText(dtdlFilePath));
-                }
-
-                // upload
-                Azure.Response<DigitalTwinsModelData[]> response = client.CreateModelsAsync(dtdlModels).GetAwaiter().GetResult();
+                ADTClient = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential(new DefaultAzureCredentialOptions{ ExcludeVisualStudioCodeCredential = true }));
 
                 // clear secret
                 Environment.SetEnvironmentVariable("AZURE_CLIENT_SECRET", "");
 
-                if (response.GetRawResponse().Status == 201)
-                {
-                    adtModel.StatusMessage = "Upload successful!";
-                    return View("Index", adtModel);
-                }
-                else
-                {
-                    adtModel.StatusMessage = response.GetRawResponse().ReasonPhrase;
-                    return View("Index", adtModel);
-                }
+                adtModel.StatusMessage = "Login successful!";
+                return View("Index", adtModel);
             }
             catch (Exception ex)
             {

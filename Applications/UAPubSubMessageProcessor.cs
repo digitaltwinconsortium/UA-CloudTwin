@@ -1,6 +1,8 @@
 ﻿
 namespace UACloudTwin
 {
+    using Azure;
+    using Azure.DigitalTwins.Core;
     using Microsoft.AspNetCore.SignalR;
     using Newtonsoft.Json;
     using Opc.Ua;
@@ -13,6 +15,7 @@ namespace UACloudTwin
     using System.Linq;
     using System.Text;
     using System.Threading;
+    using UACloudTwin.Controllers;
     using UACloudTwin.Interfaces;
 
     public class UAPubSubMessageProcessor : IMessageProcessor
@@ -384,12 +387,10 @@ namespace UACloudTwin
 
                     try
                     {
-                        string timeStamp = publishedNodes[nodeId].SourceTimestamp.ToString();
                         if (publishedNodes[nodeId].Value != null)
                         {
-                            string value = publishedNodes[nodeId].Value.ToString();
-
-                            //TODO: Update ADT twin properties for each published node
+                            // Update ADT twin properties for each published node
+                            UpdateADTTwin(nodeId, publishedNodes[nodeId].Value.ToString(), publishedNodes[nodeId].SourceTimestamp);
                         }
                     }
                     catch (Exception ex)
@@ -399,6 +400,28 @@ namespace UACloudTwin
                     }
                 }
             }
+        }
+
+        private void UpdateADTTwin(string nodeId, string value, DateTime timeStamp)
+        {
+            JsonPatchDocument updateTwinData = new();
+            updateTwinData.AppendAdd($"/{nodeId}", value);
+
+            // create the twin before doing the patch, if required
+            try
+            {
+                ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(nodeId);
+            }
+            catch (Exception)
+            {
+                ADT.ADTClient?.CreateOrReplaceDigitalTwin(nodeId, new BasicDigitalTwin()
+                {
+                    Id = nodeId
+                });
+            }
+
+            // update twin with full patch document
+            ADT.ADTClient?.UpdateDigitalTwinAsync(nodeId, updateTwinData).GetAwaiter().GetResult();
         }
     }
 }
