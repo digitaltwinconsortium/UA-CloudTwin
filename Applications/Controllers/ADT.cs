@@ -81,7 +81,7 @@ namespace UACloudTwin.Controllers
 
                 ADTModel adtModel = new ADTModel
                 {
-                    StatusMessage = "Login to ADT service and connection to broker successful!"
+                    StatusMessage = "Connection to broker and ADT service successful!"
                 };
 
                 return View("Index", adtModel);

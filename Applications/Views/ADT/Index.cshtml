@@ -12,16 +12,15 @@
     {
     <div class="browser_connect_selection_textbox">
         <p>
-            This app sits between an Azure IoT/Event Hub and an Azure Digital Twins service and translates OPC UA messages to digital twins.<br/>
-            <b>Please ensure you have enabled and added this app's managed identity to the "Azure Digital Twins Data Owner" role permissions of your ADT service instance!</b><br />
+            This app creates the connection between an MQTT or Kafka broker (like Azure IoT Hub or Azure Event Hubs) and an Azure Digital Twins service and applies OPC UA messages to digital twins.<br/>
         </p>
-        <p>
-            Azure Digital Twins service instance Url (format: https://YourADTInstanceName.api.YourAzureRegionName.digitaltwins.azure.net)<br />
-            @Html.TextBox("instanceUrl", null, new { style = "width:100%;" })<br />
-        <p />
         <p>
             Azure Event Hub connection string (format: Endpoint=sb://theNamespace.servicebus.windows.net/;SharedAccessKeyName=theName;SharedAccessKey=theKey;EntityPath=theTopic)<br />
             @Html.TextBox("endpoint", null, new { style = "width:100%;" })<br />
+        <p />
+        <p>
+            Azure Digital Twins service instance Url (format: https://YourADTInstanceName.api.YourAzureRegionName.digitaltwins.azure.net)<br />
+                @Html.TextBox("instanceUrl", null, new { style = "width:100%;" })<br />
         <p />
         <p>
             <input id="uploadButton" class="btn btn-primary btn_browser" type="submit" value="Connect">
