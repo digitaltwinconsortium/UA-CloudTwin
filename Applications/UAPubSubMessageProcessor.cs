@@ -416,7 +416,8 @@ namespace UACloudTwin
             {
                 ADT.ADTClient?.CreateOrReplaceDigitalTwin(nodeId, new BasicDigitalTwin()
                 {
-                    Id = nodeId
+                    Id = nodeId,
+                    Metadata = { ModelId = "dtmi:digitaltwins:isa95:WorkCenter;1" }
                 });
             }
 

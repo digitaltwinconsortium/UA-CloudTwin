@@ -1,8 +1,13 @@
 ﻿
+using Azure;
 using Azure.DigitalTwins.Core;
 using Azure.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using UACloudTwin.Interfaces;
 using UACloudTwin.Models;
 
@@ -39,7 +44,26 @@ namespace UACloudTwin.Controllers
         {
             try
             {
-                ADTClient = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential(true));
+                ADTClient = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential());
+
+                // read our ISA95 models
+                foreach (string dtdlFilePath in Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), "*.json"))
+                {
+                    string fileContent = System.IO.File.ReadAllText(dtdlFilePath);
+
+                    JObject elements = JsonConvert.DeserializeObject<JObject>(fileContent);
+                    string modelId = elements.First.Next.First.ToString();
+
+                    // upload the model if it doesn't already exist
+                    try
+                    {
+                        ADTClient.GetModel(modelId);
+                    }
+                    catch (RequestFailedException)
+                    {
+                        Response<DigitalTwinsModelData[]> response = ADTClient.CreateModels(new List<string>() { fileContent });
+                    }
+                }
 
                 if (!string.IsNullOrEmpty(endpoint))
                 {
