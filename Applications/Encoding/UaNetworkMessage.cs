@@ -104,11 +104,15 @@ namespace Opc.Ua.PubSub
                     {
                         return m_uaDataSetMessages[0].DataSetWriterId;
                     }
-
+                    else
+                    {
+                        return m_dataSetWriterId;
+                    }
+                }
+                else
+                {
                     return m_dataSetWriterId;
                 }
-
-                return 0;
             }
 
             set

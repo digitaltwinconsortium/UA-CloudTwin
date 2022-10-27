@@ -15,6 +15,7 @@ namespace UACloudTwin
     using System.Linq;
     using System.Text;
     using System.Threading;
+    using System.Threading.Tasks;
     using UACloudTwin.Controllers;
     using UACloudTwin.Interfaces;
 
@@ -229,7 +230,6 @@ namespace UACloudTwin
                 _logger.LogError($"Exception {ex.Message} trying to extract OPC UA asset name from metadata name field");
             }
 
-            // add to our SignalR table
             if (!string.IsNullOrEmpty(assetName))
             {
                 lock (_hubClient.TableEntries)
@@ -240,12 +240,18 @@ namespace UACloudTwin
                     }
                     else
                     {
+                        // add to our SignalR table
                         _hubClient.TableEntries.Add(assetName, new Tuple<string, string>("OPC UA asset", receivedTime.ToString()));
+
+                        // add asset to ADT as digital twin
+                        AddAssetToADT(assetName);
                     }
                 }
             }
+        }
 
-            // add asset to ADT as digital twin
+        private void AddAssetToADT(string assetName)
+        {
             if (!string.IsNullOrEmpty(assetName))
             {
                 try
@@ -317,34 +323,33 @@ namespace UACloudTwin
                 _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
 
                 string publisherID;
-                string dataSetWriterId;
                 if (encodedMessage is JsonNetworkMessage)
                 {
                     publisherID = ((JsonNetworkMessage)encodedMessage).PublisherId?.ToString();
-                    dataSetWriterId = ((JsonNetworkMessage)encodedMessage).DataSetWriterId.ToString();
                 }
                 else
                 {
                     publisherID = ((UadpNetworkMessage)encodedMessage).PublisherId?.ToString();
-                    dataSetWriterId = ((UadpNetworkMessage)encodedMessage).DataSetWriterId.ToString();
-                }
-
-                // extract the asset name
-                string assetName = null;
-                try
-                {
-                    string name = _dataSetReaders[publisherID + ":" + dataSetWriterId.ToString()].DataSetMetaData.Name;
-                    assetName = name.Substring(0, name.LastIndexOf(';'));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Could not find dataset reader: {ex.Message}");
                 }
 
                 // now flatten any complex types
-                Dictionary<string, DataValue> flattenedPublishedNodes = new();
                 foreach (UaDataSetMessage datasetmessage in encodedMessage.DataSetMessages)
                 {
+                    Dictionary<string, DataValue> flattenedPublishedNodes = new();
+
+                    // extract the asset name
+                    string dataSetWriterId = datasetmessage.DataSetWriterId.ToString();
+                    string assetName = null;
+                    if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId.ToString()))
+                    {
+                        string name = _dataSetReaders[publisherID + ":" + dataSetWriterId.ToString()].DataSetMetaData.Name;
+                        assetName = name.Substring(0, name.LastIndexOf(';'));
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"No metadata message for {publisherID}:{dataSetWriterId} received yet!");
+                    }
+
                     if (datasetmessage.DataSet != null)
                     {
                         for (int i = 0; i < datasetmessage.DataSet.Fields.Count(); i++)
@@ -413,9 +418,9 @@ namespace UACloudTwin
                             }
                         }
                     }
-                }
 
-                SendPublishedNodesToADT(assetName, flattenedPublishedNodes);
+                    SendPublishedNodesToADT(assetName, flattenedPublishedNodes);
+                }
             }
         }
 
@@ -434,12 +439,11 @@ namespace UACloudTwin
                         if (publishedNode.Value != null)
                         {
                             // Update ADT twin properties for each published node
-                            UpdateADTTwin(assetName, publishedNodeId, publishedNode.Value.ToString());
+                            _ = Task.Run(() => UpdateADTTwin(assetName, publishedNodeId, publishedNode.Value.ToString()));
                         }
                     }
                     catch (Exception ex)
                     {
-                        // ignore this item
                         _logger.LogInformation($"Cannot add item {publishedNodeId}: {ex.Message}");
                     }
                 }
@@ -468,7 +472,7 @@ namespace UACloudTwin
                     updateTwinData.AppendAdd($"/tags/values", tagValues);
 
                     // update twin with full patch document
-                    ADT.ADTClient?.UpdateDigitalTwinAsync(DTDLEscapeString(assetName), updateTwinData);
+                    ADT.ADTClient?.UpdateDigitalTwinAsync(DTDLEscapeString(assetName), updateTwinData).GetAwaiter().GetResult();
                 }
             }
         }
