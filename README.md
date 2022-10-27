@@ -1,2 +1,33 @@
 # UA Cloud Twin
-A cloud-based Digital Twin Definition Language (DTDL) adapter for OPC UA data.
+A cloud-based Digital Twin Definition Language (DTDL) adapter for OPC UA data. It connects to an MQTT or Kafka broker, subscribes to a topic containing OPC UA PubSub telemetry messages, parses these messages and automatically extraxcts OPC UA-enables asset names from the telemetry stream and then creates digital twins for each asset indetified in Azure Digital Twins service in DTDL format. It then proceeds to update telemetry "tags" for each digital twin created with the relevant OPC UA PubSub datasets, all fully automatically.
+
+
+## Installation
+
+The following environment variables can be defined:
+
+* BROKER_NAME - the name of the broker to use
+* BROKER_PORT - the port number of the broker
+* CLIENT_NAME - the client name to use with the broker
+* USERNAME - the username to use with the broker
+* PASSWORD - the password to use with the broker
+* TOPIC - the broker topic to read messages from
+* METADATA_TOPIC - (optional) the broker metadata topic to read messages from
+* USE_MQTT - (optional) Read OPC UA PubSub telementry messages from an MQTT borker instead of a Kafka broker
+* USE_TLS - (optional) set to 1 to use Transport Layer Security
+
+Alternatively, if an Azure IoT Hub or Azure Event Hubs are used for the broker, the Azure Event Hub connection string can be specified in the UI to avoid the need to specify the above environment variables. The Azure Event Hub connection string can be read in the Azure Portal for IoT Hub under Built-in Endpoints -> Event Hub-compatible endpoint and for Azure Event Hubs under Shared Access Policies -> RootManageSharedAccessKey -> Connection string-primary key.
+
+## Usage
+
+Run it on a Docker-enabled computer via:
+
+`docker run -e anEnvironmentVariableFromAbove="yourSetting" -p 80:80 ghcr.io/digitaltwinconsortium/ua-cloudtwin:main`
+
+Alternatively,  you can run it in a Docker-enabled web application in the Cloud.
+
+Then point your web browser to <http://yourIPAddress>
+
+## Build Status
+
+[![Docker](https://github.com/digitaltwinconsortium/UA-CloudTwin/actions/workflows/docker-build.yml/badge.svg)](https://github.com/digitaltwinconsortium/UA-CloudTwin/actions/workflows/docker-build.yml)
