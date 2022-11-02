@@ -54,7 +54,7 @@ namespace UACloudTwin
                     .WithTimeout(TimeSpan.FromSeconds(10))
                     .WithKeepAlivePeriod(TimeSpan.FromSeconds(100))
                     .WithCleanSession(true) // clear existing subscriptions
-                    .WithCredentials(Environment.GetEnvironmentVariable("USERNAME"), Environment.GetEnvironmentVariable("PASSWORD"));
+                    .WithCredentials(Environment.GetEnvironmentVariable("BROKER_USERNAME"), Environment.GetEnvironmentVariable("BROKER_PASSWORD"));
 
                 // setup disconnection handling
                 _client.DisconnectedAsync += disconnectArgs =>

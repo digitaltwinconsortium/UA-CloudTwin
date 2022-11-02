@@ -69,8 +69,8 @@ namespace UACloudTwin.Controllers
                 {
                     string[] parts = endpoint.Split(';');
 
-                    Environment.SetEnvironmentVariable("USERNAME", "$ConnectionString");
-                    Environment.SetEnvironmentVariable("PASSWORD", endpoint);
+                    Environment.SetEnvironmentVariable("BROKER_USERNAME", "$ConnectionString");
+                    Environment.SetEnvironmentVariable("BROKER_PASSWORD", endpoint);
                     Environment.SetEnvironmentVariable("BROKER_PORT", "9093");
                     Environment.SetEnvironmentVariable("CLIENT_NAME", "microsoft");
                     Environment.SetEnvironmentVariable("BROKER_NAME", parts[0].Substring(parts[0].IndexOf('=') + 6).TrimEnd('/'));
