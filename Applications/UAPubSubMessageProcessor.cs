@@ -218,11 +218,17 @@ namespace UACloudTwin
         {
             // try to extract the OPC UA asset name from the metadata name field (like UA Cloud Publisher supports)
             string assetName = string.Empty;
+            string uaApplicationURI = string.Empty;
+            string uaNamespaceURI = string.Empty;
+
             try
             {
                 if (metadata.Name != null)
                 {
-                    assetName = metadata.Name.Substring(0, metadata.Name.LastIndexOf(';'));
+                    string[] parts = metadata.Name.Split(';');
+                    uaApplicationURI = parts[0];
+                    uaNamespaceURI = parts[1];
+                    assetName = parts[0] + '_' + parts[1];
                 }
             }
             catch (Exception ex)
@@ -244,13 +250,13 @@ namespace UACloudTwin
                         _hubClient.TableEntries.Add(assetName, new Tuple<string, string>("OPC UA asset", receivedTime.ToString()));
 
                         // add asset to ADT as digital twin
-                        AddAssetToADT(assetName, publisherName);
+                        AddAssetToADT(assetName, uaApplicationURI, uaNamespaceURI, publisherName);
                     }
                 }
             }
         }
 
-        private void AddAssetToADT(string assetName, string publisherName)
+        private void AddAssetToADT(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName)
         {
             // create ISA95 Work Center for asset
             if (!string.IsNullOrEmpty(assetName))
@@ -259,7 +265,7 @@ namespace UACloudTwin
                 {
                     ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeString(assetName));
                 }
-                catch (Exception)
+                catch (RequestFailedException)
                 {
                     BasicDigitalTwin twin = new()
                     {
@@ -270,7 +276,10 @@ namespace UACloudTwin
                         },
                         Contents =
                         {
-                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} }
+                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                            { "OPCUAApplicationURI", uaApplicationURI },
+                            { "OPCUANamespaceURI", uaNamespaceURI },
+                            { "equipmentLevel", "Work Center" }
                         }
                     };
 
@@ -278,7 +287,7 @@ namespace UACloudTwin
                     {
                         ADT.ADTClient?.CreateOrReplaceDigitalTwin(DTDLEscapeString(assetName), twin);
                     }
-                    catch (Exception ex)
+                    catch (RequestFailedException ex)
                     {
                         _logger.LogError("Error creating ADT twin: {nodeId} {ex} {twin}", DTDLEscapeString(assetName), ex, JsonConvert.SerializeObject(twin));
                     }
@@ -292,7 +301,7 @@ namespace UACloudTwin
                 {
                     ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeString(publisherName));
                 }
-                catch (Exception)
+                catch (RequestFailedException)
                 {
                     BasicDigitalTwin twin = new()
                     {
@@ -303,7 +312,8 @@ namespace UACloudTwin
                         },
                         Contents =
                         {
-                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} }
+                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                            { "equipmentLevel", "Area" }
                         }
                     };
 
@@ -311,7 +321,7 @@ namespace UACloudTwin
                     {
                         ADT.ADTClient?.CreateOrReplaceDigitalTwin(DTDLEscapeString(publisherName), twin);
                     }
-                    catch (Exception ex)
+                    catch (RequestFailedException ex)
                     {
                         _logger.LogError("Error creating ADT twin: {nodeId} {ex} {twin}", DTDLEscapeString(publisherName), ex, JsonConvert.SerializeObject(twin));
                     }
@@ -321,22 +331,45 @@ namespace UACloudTwin
             // create relationship between the two
             if (!string.IsNullOrEmpty(assetName) && !string.IsNullOrEmpty(publisherName))
             {
-                string id = new Guid().ToString();
-                BasicRelationship relationship = new()
-                {
-                    Id = id,
-                    SourceId = DTDLEscapeString(publisherName),
-                    TargetId = DTDLEscapeString(assetName),
-                    Name = "contains"
-                };
-
                 try
                 {
-                    ADT.ADTClient?.CreateOrReplaceRelationship(DTDLEscapeString(publisherName), id, relationship);
+                    bool relationshipExists = false;
+
+                    Pageable<BasicRelationship> existingRelationships = ADT.ADTClient.GetRelationships<BasicRelationship>(DTDLEscapeString(publisherName));
+
+                    foreach (BasicRelationship existingRelationship in existingRelationships)
+                    {
+                        if (existingRelationship.TargetId == DTDLEscapeString(assetName) && existingRelationship.Name == "contains")
+                        {
+                            relationshipExists = true;
+                            break;
+                        }
+                    }
+
+                    if (!relationshipExists)
+                    {
+                        throw new RequestFailedException("Relationship doesn't exist!");
+                    }
                 }
-                catch (Exception ex)
+                catch (RequestFailedException)
                 {
-                    _logger.LogError("Error creating ADT relationship: {publisher} {asset} {ex} {relationship}", DTDLEscapeString(publisherName), DTDLEscapeString(assetName), ex, JsonConvert.SerializeObject(relationship));
+                    string id = Guid.NewGuid().ToString();
+                    BasicRelationship relationship = new()
+                    {
+                        Id = id,
+                        SourceId = DTDLEscapeString(publisherName),
+                        TargetId = DTDLEscapeString(assetName),
+                        Name = "contains"
+                    };
+
+                    try
+                    {
+                        ADT.ADTClient?.CreateOrReplaceRelationship(DTDLEscapeString(publisherName), id, relationship);
+                    }
+                    catch (RequestFailedException ex)
+                    {
+                        _logger.LogError("Error creating ADT relationship: {publisher} {asset} {ex} {relationship}", DTDLEscapeString(publisherName), DTDLEscapeString(assetName), ex, JsonConvert.SerializeObject(relationship));
+                    }
                 }
             }
         }
@@ -534,7 +567,7 @@ namespace UACloudTwin
                 twin = ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(id);
                 return twin != null;
             }
-            catch (Exception)
+            catch (RequestFailedException)
             {
                 twin = null;
                 return false;
