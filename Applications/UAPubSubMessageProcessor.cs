@@ -258,7 +258,7 @@ namespace UACloudTwin
 
         private void AddAssetToADT(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName)
         {
-            // create ISA95 Work Center for asset
+            // create OPC UA Nodeset for asset
             if (!string.IsNullOrEmpty(assetName))
             {
                 try
@@ -272,7 +272,7 @@ namespace UACloudTwin
                         Id = DTDLEscapeString(assetName),
                         Metadata =
                         {
-                            ModelId = "dtmi:digitaltwins:isa95:WorkCenter;1"
+                            ModelId = "dtmi:digitaltwins:opcua:nodeset;1"
                         },
                         Contents =
                         {

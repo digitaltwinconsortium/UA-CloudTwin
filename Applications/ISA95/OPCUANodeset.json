@@ -1,0 +1,38 @@
+{
+    "@context": "dtmi:dtdl:context;2",
+    "@id": "dtmi:digitaltwins:opcua:nodeset;1",
+    "@type": "Interface",
+    "displayName": "OPC UA Nodeset",
+    "description": "An OPC UA Nodeset mapped to an OPC UA namespace within an OPC UA server.",
+  "extends": ["dtmi:digitaltwins:isa95:WorkCenter;1"],
+  "contents": [
+    {
+      "@type": "Property",
+      "name": "OPCUAInfoModelURL",
+      "schema": "string",
+      "comment": "UA Cloud Library download link to the associated OPC UA info model",
+      "writable": true
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUAApplicationURI",
+      "schema": "string",
+      "comment": "OPC UA Application URI of the OPC UA server",
+      "writable": true
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANamespaceURI",
+      "schema": "string",
+      "comment": "OPC UA Namespace URI of the OPC UA server",
+      "writable": true
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUAEndpointURL",
+      "schema": "string",
+      "comment": "OPC UA Endpoint URL on the shop floor to connect to",
+      "writable": true
+    }
+  ]
+}
