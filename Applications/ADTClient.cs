@@ -4,7 +4,6 @@ namespace UACloudTwin
     using Azure;
     using Azure.DigitalTwins.Core;
     using Azure.Identity;
-    using Confluent.Kafka;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -13,6 +12,7 @@ namespace UACloudTwin
     using System.Collections.Generic;
     using System.IO;
     using System.Threading.Tasks;
+    using UACloudTwin.Interfaces;
 
     public class ADTClient : IDigitalTwinClient
     {
