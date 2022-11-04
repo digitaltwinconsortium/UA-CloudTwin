@@ -47,30 +47,68 @@ namespace UACloudTwin.Controllers
                 ADTClient = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential());
 
                 // read our ISA95 models
-                foreach (string dtdlFilePath in Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), "*.json"))
+                List<string> models = new List<string>();
+                List<string> modelIds = new List<string>();
+
+                IEnumerable<string> files = Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), "*.json");
+                foreach (string dtdlFilePath in files)
                 {
-                    string fileContent = System.IO.File.ReadAllText(dtdlFilePath);
+                    // extract model definition
+                    string modelDefinition = System.IO.File.ReadAllText(dtdlFilePath);
+                    models.Add(modelDefinition);
 
-                    JObject elements = JsonConvert.DeserializeObject<JObject>(fileContent);
+                    // extract model ID
+                    JObject elements = JsonConvert.DeserializeObject<JObject>(modelDefinition);
                     string modelId = elements.First.Next.First.ToString();
-
-                    // upload the model if it doesn't already exist
-                    try
-                    {
-                        ADTClient.GetModel(modelId);
-                    }
-                    catch (RequestFailedException)
-                    {
-                        Response<DigitalTwinsModelData[]> response = ADTClient.CreateModels(new List<string>() { fileContent });
-                    }
+                    modelIds.Add(modelId);
                 }
+
+                // delete existing models if they already exist
+                int numTriesRemaining = modelIds.Count;
+                while ((numTriesRemaining > 0) && (modelIds.Count > 0))
+                {
+                    for (int i = 0; i < modelIds.Count; i++)
+                    {
+                        Response<DigitalTwinsModelData> metadata = null;
+                        try
+                        {
+                            metadata = ADTClient.GetModel(modelIds[i]);
+                        }
+                        catch (RequestFailedException)
+                        {
+                            // model doesn't exist
+                            modelIds.Remove(modelIds[i]);
+                            i--;
+                        }
+
+                        if (metadata != null)
+                        {
+                            try
+                            {
+                                ADTClient.DeleteModel(modelIds[i]);
+                                modelIds.Remove(modelIds[i]);
+                                i--;
+                            }
+                            catch (RequestFailedException)
+                            {
+                                // do nothing, since this could be due to a dependent model still not deleted,
+                                // so we will try to delete those first until numTriesRemaining is zero)
+                            }
+                        }
+                    }
+
+                    numTriesRemaining--;
+                }
+
+                // upload all models at once to make sure relationship checks succeed
+                Response<DigitalTwinsModelData[]> response = ADTClient.CreateModels(models);
 
                 if (!string.IsNullOrEmpty(endpoint))
                 {
                     string[] parts = endpoint.Split(';');
 
-                    Environment.SetEnvironmentVariable("USERNAME", "$ConnectionString");
-                    Environment.SetEnvironmentVariable("PASSWORD", endpoint);
+                    Environment.SetEnvironmentVariable("BROKER_USERNAME", "$ConnectionString");
+                    Environment.SetEnvironmentVariable("BROKER_PASSWORD", endpoint);
                     Environment.SetEnvironmentVariable("BROKER_PORT", "9093");
                     Environment.SetEnvironmentVariable("CLIENT_NAME", "microsoft");
                     Environment.SetEnvironmentVariable("BROKER_NAME", parts[0].Substring(parts[0].IndexOf('=') + 6).TrimEnd('/'));

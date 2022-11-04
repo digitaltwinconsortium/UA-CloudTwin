@@ -9,8 +9,8 @@ The following environment variables can be defined:
 * BROKER_NAME - the name of the broker to use
 * BROKER_PORT - the port number of the broker
 * CLIENT_NAME - the client name to use with the broker
-* USERNAME - the username to use with the broker
-* PASSWORD - the password to use with the broker
+* BROKER_USERNAME - the username to use with the broker
+* BROKER_PASSWORD - the password to use with the broker
 * TOPIC - the broker topic to read messages from
 * METADATA_TOPIC - (optional) the broker metadata topic to read messages from
 * USE_MQTT - (optional) Read OPC UA PubSub telementry messages from an MQTT borker instead of a Kafka broker

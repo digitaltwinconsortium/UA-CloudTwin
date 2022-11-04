@@ -2,7 +2,7 @@
  * Copyright (c) 2005-2021 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -11,7 +11,7 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -38,7 +38,7 @@ namespace Opc.Ua.PubSub.Encoding
 {
     /// <summary>
     /// The UADPDataSetMessage class handler.
-    /// It handles the UADPDataSetMessage encoding 
+    /// It handles the UADPDataSetMessage encoding
     /// </summary>
     public class UadpDataSetMessage : UaDataSetMessage
     {
@@ -62,7 +62,7 @@ namespace Opc.Ua.PubSub.Encoding
 
         /// <summary>
         /// Constructor for <see cref="UadpDataSetMessage"/> with DataSet parameter
-        /// </summary>     
+        /// </summary>
         public UadpDataSetMessage(DataSet dataSet = null) : this()
         {
             DataSet = dataSet;
@@ -118,7 +118,7 @@ namespace Opc.Ua.PubSub.Encoding
         #region Public Methods
 
         /// <summary>
-        /// Set DataSetFieldContentMask 
+        /// Set DataSetFieldContentMask
         /// </summary>
         /// <param name="fieldContentMask">The new <see cref="DataSetFieldContentMask"/> for this dataset</param>
         public override void SetFieldContentMask(DataSetFieldContentMask fieldContentMask)
@@ -156,7 +156,7 @@ namespace Opc.Ua.PubSub.Encoding
         }
 
         /// <summary>
-        /// Set MessageContentMask 
+        /// Set MessageContentMask
         /// </summary>
         /// <param name="messageContentMask"></param>
         public void SetMessageContentMask(UadpDataSetMessageContentMask messageContentMask)
@@ -375,7 +375,7 @@ namespace Opc.Ua.PubSub.Encoding
                     binaryEncoder.WriteUInt16("DataSetFieldCount", (UInt16)DataSet.Fields.Length);
                     foreach (Field field in DataSet.Fields)
                     {
-                        // 10 DataValue type 
+                        // 10 DataValue type
                         binaryEncoder.WriteDataValue("DataValue", field.Value);
                     }
                     break;
@@ -421,7 +421,7 @@ namespace Opc.Ua.PubSub.Encoding
                         binaryEncoder.WriteVariant("FieldValue", field.Value.WrappedValue);
                         break;
                     case FieldTypeEncodingMask.DataValue:
-                        // 10 DataValue type 
+                        // 10 DataValue type
                         binaryEncoder.WriteDataValue("FieldValue", field.Value);
                         break;
                     case FieldTypeEncodingMask.RawData:
@@ -431,7 +431,7 @@ namespace Opc.Ua.PubSub.Encoding
                         // ignore
                         break;
                 }
-            }            
+            }
         }
 
         #endregion
@@ -512,7 +512,7 @@ namespace Opc.Ua.PubSub.Encoding
                 {
                     if (dataSetMetaData != null)
                     {
-                        // metadata should provide field count 
+                        // metadata should provide field count
                         fieldCount = (ushort)dataSetMetaData.Fields.Count;
                     }
                 }
@@ -523,7 +523,7 @@ namespace Opc.Ua.PubSub.Encoding
 
                 TargetVariablesDataType targetVariablesData =
                    ExtensionObject.ToEncodeable(dataSetReader.SubscribedDataSet) as TargetVariablesDataType;
-                
+
                 // check configuration version
                 List<DataValue> dataValues = new List<DataValue>();
                 switch (fieldType)
@@ -563,7 +563,7 @@ namespace Opc.Ua.PubSub.Encoding
                 List<Field> dataFields = new List<Field>();
 
                 for (int i = 0; i < dataValues.Count; i++)
-                {                
+                {
                     Field dataField = new Field();
                     dataField.Value = dataValues[i];
 
@@ -588,7 +588,7 @@ namespace Opc.Ua.PubSub.Encoding
                                         {
                                             string[] keyValue = new string[2];
                                             keyValue[0] = dataType.StructureDefinition.Fields[j].Name;
-                                            
+
                                             switch ((UInt32)dataType.StructureDefinition.Fields[j].DataType.Identifier)
                                             {
                                                 case (UInt32)BuiltInType.Boolean: keyValue[1] = BitConverter.ToBoolean(valueArray, valueArrayIndex).ToString(); valueArrayIndex += 1; break;
@@ -618,7 +618,7 @@ namespace Opc.Ua.PubSub.Encoding
                             }
                         }
                     }
-                    
+
                     if (targetVariablesData != null && targetVariablesData.TargetVariables != null
                         && i < targetVariablesData.TargetVariables.Count)
                     {
@@ -667,14 +667,14 @@ namespace Opc.Ua.PubSub.Encoding
                 {
                     TargetVariablesDataType targetVariablesData =
                         ExtensionObject.ToEncodeable(dataSetReader.SubscribedDataSet) as TargetVariablesDataType;
-                   
+
                     // create dataFields collection
                     List<Field> dataFields = new List<Field>();
                     for (int i = 0; i < dataSetMetaData.Fields.Count; i++)
                     {
                         Field dataField = new Field();
                         dataField.FieldMetaData = dataSetMetaData?.Fields[i];
-                        
+
                         if (targetVariablesData != null && targetVariablesData.TargetVariables != null
                             && i < targetVariablesData.TargetVariables.Count)
                         {
@@ -707,7 +707,7 @@ namespace Opc.Ua.PubSub.Encoding
                                 {
                                     var decodedValue = DecodeRawData(binaryDecoder, fieldMetaData);
                                     dataFields[fieldIndex].Value = new DataValue(new Variant(decodedValue));
-                                }                                
+                                }
                                 break;
                             case FieldTypeEncodingMask.Reserved:
                                 // ignore
@@ -722,15 +722,15 @@ namespace Opc.Ua.PubSub.Encoding
                     dataSet.DataSetWriterId = DataSetWriterId;
                     dataSet.SequenceNumber = SequenceNumber;
                     return dataSet;
-                }      
+                }
             }
             catch (Exception ex)
             {
-                Utils.Trace(ex, "UadpDataSetMessage.DecodeMessageDataDeltaFrame");               
+                Utils.Trace(ex, "UadpDataSetMessage.DecodeMessageDataDeltaFrame");
             }
             return null;
         }
-        
+
         /// <summary>
         /// Encodes field value as RawData
         /// </summary>
@@ -740,7 +740,7 @@ namespace Opc.Ua.PubSub.Encoding
         {
             try
             {
-                // 01 RawData Field Encoding 
+                // 01 RawData Field Encoding
                 var variant = field.Value.WrappedValue;
 
                 if (variant.TypeInfo == null || variant.TypeInfo.BuiltInType == BuiltInType.Null)

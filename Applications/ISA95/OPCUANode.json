@@ -1,0 +1,25 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:digitaltwins:opcua:node;1",
+  "@type": "Interface",
+  "displayName": "OPC UA Node",
+  "description": "An OPC UA Node within an OPC UA namespace within an OPC UA server.",
+  "extends": ["dtmi:digitaltwins:isa95:WorkUnit;1"],
+  "contents": [
+    {
+      "@type": "Telemetry",
+      "name": "OPCUADisplayName",
+      "schema": "string"
+    },
+    {
+      "@type": "Telemetry",
+      "name": "OPCUANodeId",
+      "schema": "string"
+    },
+    {
+      "@type": "Telemetry",
+      "name": "OPCUANodeValue",
+      "schema": "string"
+    }
+  ]
+}
