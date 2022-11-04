@@ -7,17 +7,17 @@
   "extends": ["dtmi:digitaltwins:isa95:WorkUnit;1"],
   "contents": [
     {
-      "@type": "Telemetry",
+      "@type": "Property",
       "name": "OPCUADisplayName",
       "schema": "string"
     },
     {
-      "@type": "Telemetry",
+      "@type": "Property",
       "name": "OPCUANodeId",
       "schema": "string"
     },
     {
-      "@type": "Telemetry",
+      "@type": "Property",
       "name": "OPCUANodeValue",
       "schema": "string"
     }

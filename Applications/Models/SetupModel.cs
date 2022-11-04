@@ -1,7 +1,7 @@
 ﻿
 namespace UACloudTwin.Models
 {
-    public class ADTModel
+    public class SetupModel
     {
          public string StatusMessage { get; set; }
     }

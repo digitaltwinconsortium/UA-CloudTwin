@@ -1,8 +1,6 @@
 ﻿
 namespace UACloudTwin
 {
-    using Azure;
-    using Azure.DigitalTwins.Core;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
@@ -15,27 +13,28 @@ namespace UACloudTwin
     using System.Linq;
     using System.Text;
     using System.Threading;
-    using System.Threading.Tasks;
-    using UACloudTwin.Controllers;
     using UACloudTwin.Interfaces;
 
     public class UAPubSubMessageProcessor : IMessageProcessor
     {
-        private StatusHubClient _hubClient;
+        private readonly StatusHubClient _hubClient;
         private readonly ILogger<UAPubSubMessageProcessor> _logger;
+        private readonly IDigitalTwinClient _twinClient;
+
         private Dictionary<string, DataSetReaderDataType> _dataSetReaders;
         private Timer _throughputTimer;
         private int _messagesProcessed = 0;
         private DateTime _currentTimestamp = DateTime.MinValue;
         private string _chartCategory = "OPC UA PubSub Messages Per Second Processed";
 
-        public UAPubSubMessageProcessor(IHubContext<StatusHub> hubContext, ILogger<UAPubSubMessageProcessor> logger)
+        public UAPubSubMessageProcessor(IHubContext<StatusHub> hubContext, IDigitalTwinClient twinClient, ILogger<UAPubSubMessageProcessor> logger)
         {
             _hubClient = new StatusHubClient(hubContext);
             _logger = logger;
-            _dataSetReaders = new Dictionary<string, DataSetReaderDataType>();
+            _twinClient = twinClient;
 
             // add default dataset readers
+            _dataSetReaders = new Dictionary<string, DataSetReaderDataType>();
             AddUadpDataSetReader("default_uadp", 0, new DataSetMetaDataType(), DateTime.UtcNow);
             AddJsonDataSetReader("default_json", 0, new DataSetMetaDataType(), DateTime.UtcNow);
 
@@ -248,135 +247,12 @@ namespace UACloudTwin
                     {
                         // add to our SignalR table
                         _hubClient.TableEntries.Add(assetName, new Tuple<string, string>("OPC UA asset", receivedTime.ToString()));
-
-                        // add asset to ADT as digital twin
-                        AddAssetToADT(assetName, uaApplicationURI, uaNamespaceURI, publisherName);
                     }
                 }
+
+                // add asset as digital twin
+                _twinClient.AddAsset(assetName, uaApplicationURI, uaNamespaceURI, publisherName);
             }
-        }
-
-        private void AddAssetToADT(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName)
-        {
-            // create OPC UA Nodeset for asset
-            if (!string.IsNullOrEmpty(assetName))
-            {
-                try
-                {
-                    ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeString(assetName));
-                }
-                catch (RequestFailedException)
-                {
-                    BasicDigitalTwin twin = new()
-                    {
-                        Id = DTDLEscapeString(assetName),
-                        Metadata =
-                        {
-                            ModelId = "dtmi:digitaltwins:opcua:nodeset;1"
-                        },
-                        Contents =
-                        {
-                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
-                            { "OPCUAApplicationURI", uaApplicationURI },
-                            { "OPCUANamespaceURI", uaNamespaceURI },
-                            { "equipmentLevel", "Work Center" }
-                        }
-                    };
-
-                    try
-                    {
-                        ADT.ADTClient?.CreateOrReplaceDigitalTwin(DTDLEscapeString(assetName), twin);
-                    }
-                    catch (RequestFailedException ex)
-                    {
-                        _logger.LogError("Error creating ADT twin: {nodeId} {ex} {twin}", DTDLEscapeString(assetName), ex, JsonConvert.SerializeObject(twin));
-                    }
-                }
-            }
-
-            // create ISA95 Area for publisher
-            if (!string.IsNullOrEmpty(publisherName))
-            {
-                try
-                {
-                    ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeString(publisherName));
-                }
-                catch (RequestFailedException)
-                {
-                    BasicDigitalTwin twin = new()
-                    {
-                        Id = DTDLEscapeString(publisherName),
-                        Metadata =
-                        {
-                            ModelId = "dtmi:digitaltwins:isa95:Area;1"
-                        },
-                        Contents =
-                        {
-                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
-                            { "equipmentLevel", "Area" }
-                        }
-                    };
-
-                    try
-                    {
-                        ADT.ADTClient?.CreateOrReplaceDigitalTwin(DTDLEscapeString(publisherName), twin);
-                    }
-                    catch (RequestFailedException ex)
-                    {
-                        _logger.LogError("Error creating ADT twin: {nodeId} {ex} {twin}", DTDLEscapeString(publisherName), ex, JsonConvert.SerializeObject(twin));
-                    }
-                }
-            }
-
-            // create relationship between the two
-            if (!string.IsNullOrEmpty(assetName) && !string.IsNullOrEmpty(publisherName))
-            {
-                try
-                {
-                    bool relationshipExists = false;
-
-                    Pageable<BasicRelationship> existingRelationships = ADT.ADTClient.GetRelationships<BasicRelationship>(DTDLEscapeString(publisherName));
-
-                    foreach (BasicRelationship existingRelationship in existingRelationships)
-                    {
-                        if (existingRelationship.TargetId == DTDLEscapeString(assetName) && existingRelationship.Name == "contains")
-                        {
-                            relationshipExists = true;
-                            break;
-                        }
-                    }
-
-                    if (!relationshipExists)
-                    {
-                        throw new RequestFailedException("Relationship doesn't exist!");
-                    }
-                }
-                catch (RequestFailedException)
-                {
-                    string id = Guid.NewGuid().ToString();
-                    BasicRelationship relationship = new()
-                    {
-                        Id = id,
-                        SourceId = DTDLEscapeString(publisherName),
-                        TargetId = DTDLEscapeString(assetName),
-                        Name = "contains"
-                    };
-
-                    try
-                    {
-                        ADT.ADTClient?.CreateOrReplaceRelationship(DTDLEscapeString(publisherName), id, relationship);
-                    }
-                    catch (RequestFailedException ex)
-                    {
-                        _logger.LogError("Error creating ADT relationship: {publisher} {asset} {ex} {relationship}", DTDLEscapeString(publisherName), DTDLEscapeString(assetName), ex, JsonConvert.SerializeObject(relationship));
-                    }
-                }
-            }
-        }
-
-        private string DTDLEscapeString(string input)
-        {
-            return input.Replace(":", "_").Replace(";", "_").Replace(".", "_").Replace("/", "_");
         }
 
         private void DecodeMessage(byte[] payload, DateTime receivedTime, UaNetworkMessage encodedMessage)
@@ -453,12 +329,12 @@ namespace UACloudTwin
                                         foreach (Variant variant in (Variant[])field.Value.WrappedValue.Value)
                                         {
                                             string[] keyValue = (string[])variant.Value;
-                                            flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_field" + (i + 1).ToString() + "_" + keyValue[0], new DataValue(new Variant(keyValue[1])));
+                                            flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString() + "_" + keyValue[0] + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(keyValue[1])));
                                         }
                                     }
                                     else
                                     {
-                                        flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_field" + (i + 1).ToString(), field.Value);
+                                        flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), field.Value);
                                     }
                                 }
                                 else
@@ -473,12 +349,12 @@ namespace UACloudTwin
                                                 string[] keyValue = (string[])variant.Value;
                                                 if (keyValue != null)
                                                 {
-                                                    flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + keyValue[0] + "_" + j.ToString(), new DataValue(new Variant(keyValue[1])));
+                                                    flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + i.ToString() + "_" + keyValue[0] + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(keyValue[1])));
                                                 }
                                             }
                                             else
                                             {
-                                                flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + j.ToString(), new DataValue(new Variant(variant.Value.ToString())));
+                                                flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + i.ToString() + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(variant.Value.ToString())));
                                             }
 
                                             j++;
@@ -486,7 +362,7 @@ namespace UACloudTwin
                                     }
                                     else
                                     {
-                                        string key = publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_field" + (i + 1).ToString();
+                                        string key = publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + i.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString();
                                         if (flattenedPublishedNodes.ContainsKey(key))
                                         {
                                             flattenedPublishedNodes[key] = field.Value;
@@ -502,75 +378,8 @@ namespace UACloudTwin
                         }
                     }
 
-                    SendPublishedNodesToADT(assetName, flattenedPublishedNodes);
+                    _twinClient.UpdatePublishedNodes(assetName, publisherID, flattenedPublishedNodes);
                 }
-            }
-        }
-
-        private void SendPublishedNodesToADT(string assetName, Dictionary<string, DataValue> publishedNodes)
-        {
-            if (assetName != null)
-            {
-                foreach (string publishedNodeId in publishedNodes.Keys)
-                {
-                    DataValue publishedNode = publishedNodes[publishedNodeId];
-
-                    if (publishedNode == null) continue;
-
-                    try
-                    {
-                        if (publishedNode.Value != null)
-                        {
-                            // Update ADT twin properties for each published node
-                            _ = Task.Run(() => UpdateADTTwin(assetName, publishedNodeId, publishedNode.Value.ToString()));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogInformation($"Cannot add item {publishedNodeId}: {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        private void UpdateADTTwin(string assetName, string id, string value)
-        {
-            if (GetTwin(DTDLEscapeString(assetName), out BasicDigitalTwin twin))
-            {
-                var tags = twin.Contents as Dictionary<string, object>;
-                if (tags != null)
-                {
-                    var tagValues = tags.ContainsKey("values")? tags["values"] as Dictionary<string, string> : new Dictionary<string, string>();
-
-                    if (tagValues.ContainsKey(DTDLEscapeString(id)))
-                    {
-                        tagValues[DTDLEscapeString(id)] = value;
-                    }
-                    else
-                    {
-                        tagValues.Add(DTDLEscapeString(id), value);
-                    }
-
-                    JsonPatchDocument updateTwinData = new();
-                    updateTwinData.AppendAdd($"/tags/values", tagValues);
-
-                    // update twin with full patch document
-                    ADT.ADTClient?.UpdateDigitalTwinAsync(DTDLEscapeString(assetName), updateTwinData).GetAwaiter().GetResult();
-                }
-            }
-        }
-
-        private bool GetTwin(string id, out BasicDigitalTwin twin)
-        {
-            try
-            {
-                twin = ADT.ADTClient?.GetDigitalTwin<BasicDigitalTwin>(id);
-                return twin != null;
-            }
-            catch (RequestFailedException)
-            {
-                twin = null;
-                return false;
             }
         }
     }

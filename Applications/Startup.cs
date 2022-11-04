@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using UACloudTwin.Interfaces;
 
 namespace UACloudTwin
 {
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using UACloudTwin.Interfaces;
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -24,6 +25,8 @@ namespace UACloudTwin
             services.AddSignalR();
 
             services.AddSingleton<IMessageProcessor, UAPubSubMessageProcessor>();
+
+            services.AddSingleton<IDigitalTwinClient, ADTClient>();
 
             if (!string.IsNullOrEmpty(Configuration["USE_MQTT"]))
             {
@@ -62,7 +65,7 @@ namespace UACloudTwin
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=ADT}/{action=Index}/{id?}");
+                    pattern: "{controller=Setup}/{action=Index}/{id?}");
                 endpoints.MapHub<StatusHub>("/statushub");
             });
         }
