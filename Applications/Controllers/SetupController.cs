@@ -3,17 +3,14 @@ namespace UACloudTwin.Controllers
 {
     using Microsoft.AspNetCore.Mvc;
     using System;
-    using UACloudTwin.Interfaces;
     using UACloudTwin.Models;
 
     public class SetupController : Controller
     {
-        private readonly ISubscriber _subscriber;
         private readonly IDigitalTwinClient _twinclient;
 
-        public SetupController(ISubscriber subscriber, IDigitalTwinClient twinClient)
+        public SetupController(IDigitalTwinClient twinClient)
         {
-            _subscriber = subscriber;
             _twinclient = twinClient;
         }
 
@@ -33,12 +30,11 @@ namespace UACloudTwin.Controllers
         }
 
         [HttpPost]
-        public ActionResult Login(string instanceUrl, string endpoint)
+        public ActionResult Apply(string instanceUrl, string endpoint)
         {
             try
             {
                 _twinclient.Login(instanceUrl);
-                _twinclient.UploadTwinModels();
 
                 // check if an endpoint was supplied by the user
                 if (!string.IsNullOrEmpty(endpoint))
@@ -53,11 +49,9 @@ namespace UACloudTwin.Controllers
                     Environment.SetEnvironmentVariable("TOPIC", parts[3].Substring(parts[3].IndexOf('=') + 1));
                 }
 
-                _subscriber.Connect();
-
                 SetupModel adtModel = new SetupModel
                 {
-                    StatusMessage = "Connection to broker and Setup service successful!"
+                    StatusMessage = "Settings applied successfully!"
                 };
 
                 return View("Index", adtModel);

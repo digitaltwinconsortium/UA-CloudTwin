@@ -6,6 +6,7 @@ namespace UACloudTwin
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
 
     public class Startup
@@ -39,7 +40,7 @@ namespace UACloudTwin
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ISubscriber subscriber, IDigitalTwinClient twinClient)
         {
             if (env.IsDevelopment())
             {
@@ -60,6 +61,10 @@ namespace UACloudTwin
             app.UseRouting();
 
             app.UseAuthorization();
+
+            _ = Task.Run(() => subscriber.Run());
+
+            _ = Task.Run(() => twinClient.UploadTwinModels());
 
             app.UseEndpoints(endpoints =>
             {

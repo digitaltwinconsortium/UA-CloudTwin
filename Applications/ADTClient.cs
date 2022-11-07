@@ -4,7 +4,6 @@ namespace UACloudTwin
     using Azure;
     using Azure.DigitalTwins.Core;
     using Azure.Identity;
-    using Confluent.Kafka;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -12,6 +11,7 @@ namespace UACloudTwin
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Threading;
     using System.Threading.Tasks;
 
     public class ADTClient : IDigitalTwinClient
@@ -40,8 +40,10 @@ namespace UACloudTwin
         public void UploadTwinModels()
         {
             // upload our models on a seperate thread as this takes a while
-            _ = Task.Run(() =>
+            while (!_modelsUploaded)
             {
+                Thread.Sleep(5000);
+
                 try
                 {
                     // read our ISA95 models
@@ -70,7 +72,7 @@ namespace UACloudTwin
                             Response<DigitalTwinsModelData> metadata = null;
                             try
                             {
-                                metadata = _client.GetModel(modelIds[i]);
+                                metadata = _client?.GetModel(modelIds[i]);
                             }
                             catch (RequestFailedException)
                             {
@@ -99,15 +101,19 @@ namespace UACloudTwin
                     }
 
                     // upload all models at once to make sure relationship checks succeed
-                    Response<DigitalTwinsModelData[]> response = _client.CreateModels(models);
+                    Response<DigitalTwinsModelData[]> response = _client?.CreateModels(models);
+                    if (response != null)
+                    {
+                        _logger.LogInformation("Digital twin models uploaded!");
 
-                    _modelsUploaded = true;
+                        _modelsUploaded = true;
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError($"Exception {ex.Message} uploading models!");
                 }
-            });
+            }
         }
 
         public void AddAsset(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName)

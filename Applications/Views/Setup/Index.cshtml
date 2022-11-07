@@ -8,7 +8,7 @@
 <h1>@ViewData["Title"]</h1>
 
 <div class="row browser_top_container">
-    @using (Html.BeginForm("Login", "Setup"))
+    @using (Html.BeginForm("Apply", "Setup"))
     {
     <div class="browser_connect_selection_textbox">
         <p>
@@ -23,7 +23,7 @@
             @Html.TextBox("instanceUrl", null, new { style = "width:100%;" })<br />
         <p />
         <p>
-            <input id="uploadButton" class="btn btn-primary btn_browser" type="submit" value="Connect">
+            <input id="uploadButton" class="btn btn-primary btn_browser" type="submit" value="Apply">
         <p />
         <p>
             <b>@Model.StatusMessage</b>
