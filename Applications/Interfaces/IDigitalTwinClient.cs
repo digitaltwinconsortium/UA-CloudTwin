@@ -1,5 +1,5 @@
 ﻿
-namespace UACloudTwin
+namespace UACloudTwin.Interfaces
 {
     using Opc.Ua;
     using System.Collections.Generic;
