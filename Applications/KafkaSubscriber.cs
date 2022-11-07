@@ -7,7 +7,6 @@ namespace UACloudTwin
     using System.Collections.Generic;
     using System.Text;
     using System.Threading;
-    using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
 
     public class KafkaSubscriber : ISubscriber
@@ -62,6 +61,24 @@ namespace UACloudTwin
                 {
                     _logger.LogError(ex.Message);
                 }
+            }
+        }
+
+        public void Stop()
+        {
+            try
+            {
+                // disconnect if still connected
+                if (_consumer != null)
+                {
+                    _consumer.Close();
+                    _consumer.Dispose();
+                    _consumer = null;
+                }
+            }
+            catch (Exception)
+            {
+                // do nothing
             }
         }
 

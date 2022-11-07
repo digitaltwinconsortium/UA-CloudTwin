@@ -36,6 +36,23 @@ namespace UACloudTwin
                 Thread.Sleep(5000);
             }
         }
+        public void Stop()
+        {
+            try
+            {
+                // disconnect if still connected
+                if ((_client != null) && _client.IsConnected)
+                {
+                    _client.DisconnectAsync().GetAwaiter().GetResult();
+                    _client.Dispose();
+                    _client = null;
+                }
+            }
+            catch (Exception)
+            {
+                // do nothing
+            }
+        }
 
         private bool Connect()
         {
