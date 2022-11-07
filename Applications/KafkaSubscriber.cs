@@ -60,6 +60,7 @@ namespace UACloudTwin
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message);
+                    Stop();
                 }
             }
         }
