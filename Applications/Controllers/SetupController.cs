@@ -3,6 +3,7 @@ namespace UACloudTwin.Controllers
 {
     using Microsoft.AspNetCore.Mvc;
     using System;
+    using UACloudTwin.Interfaces;
     using UACloudTwin.Models;
 
     public class SetupController : Controller
