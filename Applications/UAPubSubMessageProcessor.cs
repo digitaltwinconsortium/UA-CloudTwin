@@ -226,8 +226,13 @@ namespace UACloudTwin
                 {
                     string[] parts = metadata.Name.Split(';');
                     uaApplicationURI = parts[0];
-                    uaNamespaceURI = parts[1];
-                    assetName = parts[0] + '_' + parts[1];
+                    assetName = parts[0];
+
+                    if (parts.Length > 1)
+                    {
+                        uaNamespaceURI = parts[1];
+                        assetName += ('_' + parts[1]);
+                    }
                 }
             }
             catch (Exception ex)
@@ -329,12 +334,12 @@ namespace UACloudTwin
                                         foreach (Variant variant in (Variant[])field.Value.WrappedValue.Value)
                                         {
                                             string[] keyValue = (string[])variant.Value;
-                                            flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString() + "_" + keyValue[0] + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(keyValue[1])));
+                                            flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString() + "_" + keyValue[0], new DataValue(new Variant(keyValue[1])));
                                         }
                                     }
                                     else
                                     {
-                                        flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), field.Value);
+                                        flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString(), field.Value);
                                     }
                                 }
                                 else
