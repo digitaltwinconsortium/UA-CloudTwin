@@ -1,5 +1,4 @@
 ﻿@using UACloudTwin.Models
-
 @model SetupModel
 
 @{
@@ -16,11 +15,11 @@
         </p>
         <p>
             Please provide a connection string for the broker. Alternatively, you can define environment variables (see readme).<br />
-            @Html.TextBox("endpoint", null, new { style = "width:100%;" })<br />
+            @Html.TextBox("endpoint", (Context.Request.Query.ContainsKey("endpoint") ? Context.Request.Query["endpoint"] : (string)null), new { style = "width:100%;" })<br />
         <p />
         <p>
             Please provide an instance Url to your Digital Twin service<br />
-            @Html.TextBox("instanceUrl", null, new { style = "width:100%;" })<br />
+            @Html.TextBox("instanceUrl", (Context.Request.Query.ContainsKey("instanceUrl") ? Context.Request.Query["instanceUrl"] : (string)null), new { style = "width:100%;" })<br />
         <p />
         <p>
             <input id="uploadButton" class="btn btn-primary btn_browser" type="submit" value="Apply">
