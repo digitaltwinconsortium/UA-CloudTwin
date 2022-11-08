@@ -70,7 +70,7 @@ namespace UACloudTwin
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Setup}/{action=Index}/{id?}");
+                    pattern: "{controller=Diag}/{action=Index}/{id?}");
                 endpoints.MapHub<StatusHub>("/statushub");
             });
         }
