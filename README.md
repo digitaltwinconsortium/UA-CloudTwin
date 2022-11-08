@@ -28,7 +28,7 @@ Alternatively,  you can run it in a Docker-enabled web application in the Cloud.
 
 Then point your web browser to <http://yourIPAddress>
 
-You can navigate optionally supply the following query parameters:
+You can optionally supply the following query parameters:
 
 * `?endpoint=your-broker-connection-string` - the connection strng of the broker to use
 * `?instanceurl=your-adt-instance-url` - the URL of the Azure Digital Twins instance to use
