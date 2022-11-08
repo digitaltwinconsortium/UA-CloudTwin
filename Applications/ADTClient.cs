@@ -160,7 +160,7 @@ namespace UACloudTwin
             }
         }
 
-        public void UpdatePublishedNodes(string assetName, string publisherName, Dictionary<string, DataValue> publishedNodes)
+        public void UpdateAssetTelemetry(string assetName, string publisherName, Dictionary<string, DataValue> publishedNodes)
         {
             if (!string.IsNullOrEmpty(assetName))
             {

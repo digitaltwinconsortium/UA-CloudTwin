@@ -383,7 +383,7 @@ namespace UACloudTwin
                         }
                     }
 
-                    _twinClient.UpdatePublishedNodes(assetName, publisherID, flattenedPublishedNodes);
+                    _twinClient.UpdateAssetTelemetry(assetName, publisherID, flattenedPublishedNodes);
                 }
             }
         }
