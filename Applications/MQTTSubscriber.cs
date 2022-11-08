@@ -9,7 +9,6 @@ namespace UACloudTwin
     using MQTTnet.Protocol;
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Globalization;
     using System.Linq;
     using System.Text;
@@ -29,7 +28,15 @@ namespace UACloudTwin
             _uaMessageProcessor = uaMessageProcessor;
         }
 
-        public void Connect()
+        public void Run()
+        {
+            // try to connect every 5 seconds
+            while (!Connect())
+            {
+                Thread.Sleep(5000);
+            }
+        }
+        public void Stop()
         {
             try
             {
@@ -39,7 +46,26 @@ namespace UACloudTwin
                     _client.DisconnectAsync().GetAwaiter().GetResult();
                     _client.Dispose();
                     _client = null;
-                    Task.Delay(TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception)
+            {
+                // do nothing
+            }
+        }
+
+        private bool Connect()
+        {
+            try
+            {
+                // disconnect if still connected
+                if ((_client != null) && _client.IsConnected)
+                {
+                    _client.DisconnectAsync().GetAwaiter().GetResult();
+                    _client.Dispose();
+                    _client = null;
+
+                    Thread.Sleep(3000);
                 }
 
                 // create MQTT client
@@ -62,7 +88,8 @@ namespace UACloudTwin
                     _logger.LogInformation($"Disconnected from MQTT broker: {disconnectArgs.Reason}");
 
                     // wait a 5 seconds, then simply reconnect again, if needed
-                    Task.Delay(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+                    Thread.Sleep(5000);
+
                     if ((_client == null) || !_client.IsConnected)
                     {
                         Connect();
@@ -94,6 +121,8 @@ namespace UACloudTwin
                     }
 
                     _logger.LogInformation("Connected to MQTT broker.");
+
+                    return true;
                 }
                 catch (MqttConnectingFailedException ex)
                 {
@@ -105,11 +134,15 @@ namespace UACloudTwin
                             _logger.LogError($"{prop.Name}: {prop.Value}");
                         }
                     }
+
+                    return false;
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError("Failed to connect to MQTT broker: " + ex.Message);
+
+                return false;
             }
         }
 

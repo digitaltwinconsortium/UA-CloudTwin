@@ -6,6 +6,7 @@ namespace UACloudTwin
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
 
     public class StatusHub : Hub
@@ -27,14 +28,14 @@ namespace UACloudTwin
         {
             _hubContext = hubContext;
 
-            _ = Task.Run(() => SendMessageViaSignalR());
+            _ = Task.Run(() => Run());
         }
 
-        private async Task SendMessageViaSignalR()
+        private void Run()
         {
             while (true)
             {
-                await Task.Delay(3000).ConfigureAwait(false);
+                Thread.Sleep(3000);
 
                 lock (TableEntries)
                 {

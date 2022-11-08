@@ -1,0 +1,33 @@
+﻿@using UACloudTwin.Models
+
+@model SetupModel
+
+@{
+    ViewData["Title"] = "Settings";
+}
+<h1>@ViewData["Title"]</h1>
+
+<div class="row browser_top_container">
+    @using (Html.BeginForm("Apply", "Setup"))
+    {
+    <div class="browser_connect_selection_textbox">
+        <p>
+            This app creates the connection between an MQTT or Kafka broker and a Digital Twin service and applies OPC UA messages to digital twins.<br/>
+        </p>
+        <p>
+            Please provide a connection string for the broker. Alternatively, you can define environment variables (see readme).<br />
+            @Html.TextBox("endpoint", null, new { style = "width:100%;" })<br />
+        <p />
+        <p>
+            Please provide an instance Url to your Digital Twin service<br />
+            @Html.TextBox("instanceUrl", null, new { style = "width:100%;" })<br />
+        <p />
+        <p>
+            <input id="uploadButton" class="btn btn-primary btn_browser" type="submit" value="Apply">
+        <p />
+        <p>
+            <b>@Model.StatusMessage</b>
+        </p>
+    </div>
+    }
+ </div>

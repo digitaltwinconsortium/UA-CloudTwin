@@ -1,12 +1,14 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using UACloudTwin.Interfaces;
 
 namespace UACloudTwin
 {
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using System.Threading.Tasks;
+    using UACloudTwin.Interfaces;
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -25,6 +27,8 @@ namespace UACloudTwin
 
             services.AddSingleton<IMessageProcessor, UAPubSubMessageProcessor>();
 
+            services.AddSingleton<IDigitalTwinClient, ADTClient>();
+
             if (!string.IsNullOrEmpty(Configuration["USE_MQTT"]))
             {
                 services.AddSingleton<ISubscriber, MQTTSubscriber>();
@@ -36,7 +40,7 @@ namespace UACloudTwin
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ISubscriber subscriber, IDigitalTwinClient twinClient)
         {
             if (env.IsDevelopment())
             {
@@ -58,11 +62,15 @@ namespace UACloudTwin
 
             app.UseAuthorization();
 
+            _ = Task.Run(() => subscriber.Run());
+
+            _ = Task.Run(() => twinClient.UploadTwinModels());
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=ADT}/{action=Index}/{id?}");
+                    pattern: "{controller=Diag}/{action=Index}/{id?}");
                 endpoints.MapHub<StatusHub>("/statushub");
             });
         }
