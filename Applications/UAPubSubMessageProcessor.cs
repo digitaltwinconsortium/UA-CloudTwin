@@ -354,12 +354,12 @@ namespace UACloudTwin
                                                 string[] keyValue = (string[])variant.Value;
                                                 if (keyValue != null)
                                                 {
-                                                    flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + i.ToString() + "_" + keyValue[0] + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(keyValue[1])));
+                                                    flattenedPublishedNodes.Add(field.FieldMetaData.Name + "_" + i.ToString() + "_" + keyValue[0] + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(keyValue[1])));
                                                 }
                                             }
                                             else
                                             {
-                                                flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + i.ToString() + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(variant.Value.ToString())));
+                                                flattenedPublishedNodes.Add(field.FieldMetaData.Name + "_" + i.ToString() + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(variant.Value.ToString())));
                                             }
 
                                             j++;
@@ -367,7 +367,7 @@ namespace UACloudTwin
                                     }
                                     else
                                     {
-                                        string key = publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + field.FieldMetaData.Name + "_" + i.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString();
+                                        string key = field.FieldMetaData.Name + "_" + i.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString();
                                         if (flattenedPublishedNodes.ContainsKey(key))
                                         {
                                             flattenedPublishedNodes[key] = field.Value;

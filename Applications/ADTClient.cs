@@ -125,7 +125,7 @@ namespace UACloudTwin
                 {
                     BasicDigitalTwin publisherTwin = new()
                     {
-                        Id = DTDLEscapeString(publisherName),
+                        Id = DTDLEscapeAndTruncateString(publisherName),
                         Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:isa95:Area;1"
@@ -141,7 +141,7 @@ namespace UACloudTwin
 
                     BasicDigitalTwin twin = new()
                     {
-                        Id = DTDLEscapeString(assetName),
+                        Id = DTDLEscapeAndTruncateString(assetName),
                         Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:opcua:nodeset;1"
@@ -195,11 +195,11 @@ namespace UACloudTwin
                     {
                         bool relationshipExists = false;
 
-                        Pageable<BasicRelationship> existingRelationships = _client.GetRelationships<BasicRelationship>(DTDLEscapeString(parentId));
+                        Pageable<BasicRelationship> existingRelationships = _client.GetRelationships<BasicRelationship>(DTDLEscapeAndTruncateString(parentId));
 
                         foreach (BasicRelationship existingRelationship in existingRelationships)
                         {
-                            if ((existingRelationship.TargetId == DTDLEscapeString(childId)) && (existingRelationship.Name == "contains"))
+                            if ((existingRelationship.TargetId == DTDLEscapeAndTruncateString(childId)) && (existingRelationship.Name == "contains"))
                             {
                                 relationshipExists = true;
                                 break;
@@ -216,19 +216,19 @@ namespace UACloudTwin
                         string id = Guid.NewGuid().ToString();
                         BasicRelationship relationship = new()
                         {
-                            Id = DTDLEscapeString(id),
-                            SourceId = DTDLEscapeString(parentId),
-                            TargetId = DTDLEscapeString(childId),
+                            Id = DTDLEscapeAndTruncateString(id),
+                            SourceId = DTDLEscapeAndTruncateString(parentId),
+                            TargetId = DTDLEscapeAndTruncateString(childId),
                             Name = "contains"
                         };
 
                         try
                         {
-                            _client.CreateOrReplaceRelationship(DTDLEscapeString(parentId), DTDLEscapeString(id), relationship);
+                            _client.CreateOrReplaceRelationship(DTDLEscapeAndTruncateString(parentId), DTDLEscapeAndTruncateString(id), relationship);
                         }
                         catch (RequestFailedException ex)
                         {
-                            _logger.LogError("Error creating contains relationship: {parent} {child} {ex} {relationship}", DTDLEscapeString(parentId), DTDLEscapeString(childId), ex, JsonConvert.SerializeObject(relationship));
+                            _logger.LogError("Error creating contains relationship: {parent} {child} {ex} {relationship}", DTDLEscapeAndTruncateString(parentId), DTDLEscapeAndTruncateString(childId), ex, JsonConvert.SerializeObject(relationship));
                         }
                     }
                 }
@@ -243,7 +243,7 @@ namespace UACloudTwin
                 {
                     BasicDigitalTwin twin = new()
                     {
-                        Id = DTDLEscapeString(publishedNodeId),
+                        Id = DTDLEscapeAndTruncateString(publishedNodeId),
                         Metadata =
                         {
                             ModelId = "dtmi:digitaltwins:opcua:node;1"
@@ -270,11 +270,11 @@ namespace UACloudTwin
                             updateTwinData.AppendReplace("/OPCUANodeId", parts[4]);
                             updateTwinData.AppendReplace("/OPCUANodeValue", value);
 
-                            _client.UpdateDigitalTwinAsync(DTDLEscapeString(publishedNodeId), updateTwinData).GetAwaiter().GetResult();
+                            _client.UpdateDigitalTwinAsync(DTDLEscapeAndTruncateString(publishedNodeId), updateTwinData).GetAwaiter().GetResult();
                         }
                         catch (RequestFailedException ex)
                         {
-                            _logger.LogError("Error updating node twin: {publishedNodeId} {ex} {twin}", DTDLEscapeString(publishedNodeId), ex, JsonConvert.SerializeObject(updateTwinData));
+                            _logger.LogError("Error updating node twin: {publishedNodeId} {ex} {twin}", DTDLEscapeAndTruncateString(publishedNodeId), ex, JsonConvert.SerializeObject(updateTwinData));
                         }
                     }
                 });
@@ -285,7 +285,7 @@ namespace UACloudTwin
         {
             try
             {
-                Response<BasicDigitalTwin> twin = _client.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeString(id));
+                Response<BasicDigitalTwin> twin = _client.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeAndTruncateString(id));
                 return twin != null;
             }
             catch (RequestFailedException)
@@ -314,7 +314,7 @@ namespace UACloudTwin
                     }
                     catch (RequestFailedException ex)
                     {
-                        _logger.LogError("Error creating twin: {id} {ex} {twin}", DTDLEscapeString(metaData.Id), ex, JsonConvert.SerializeObject(metaData));
+                        _logger.LogError("Error creating twin: {id} {ex} {twin}", DTDLEscapeAndTruncateString(metaData.Id), ex, JsonConvert.SerializeObject(metaData));
                         return false;
                     }
                 }
@@ -334,9 +334,18 @@ namespace UACloudTwin
             }
         }
 
-        private string DTDLEscapeString(string input)
+        private string DTDLEscapeAndTruncateString(string input)
         {
-            return input.Replace(":", "").Replace(";", "_").Replace(".", "_").Replace("/", "").Replace("=", "");
+            string escapedString = input.Replace(":", "_").Replace(";", "_").Replace(".", "_").Replace("/", "_").Replace("\\", "_").Replace("=", "_");
+
+            if (escapedString.Length >= 128)
+            {
+                return escapedString.Substring(0, 127);
+            }
+            else
+            {
+                return escapedString;
+            }
         }
     }
 }
