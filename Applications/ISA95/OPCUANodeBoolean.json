@@ -1,0 +1,25 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:digitaltwins:opcua:node:boolean;1",
+  "@type": "Interface",
+  "displayName": "OPC UA Node for boolean data",
+  "description": "An OPC UA Node of type boolean within an OPC UA namespace within an OPC UA server.",
+  "extends": ["dtmi:digitaltwins:isa95:WorkUnit;1"],
+  "contents": [
+    {
+      "@type": "Property",
+      "name": "OPCUADisplayName",
+      "schema": "string"
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANodeId",
+      "schema": "string"
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANodeValue",
+      "schema": "boolean"
+    }
+  ]
+}

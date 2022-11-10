@@ -173,7 +173,7 @@ namespace UACloudTwin
                         if (publishedNode?.Value != null)
                         {
                             // Update twin for each published node
-                            UpdateNode(assetName, publishedNodeId, publishedNode.Value.ToString());
+                            UpdateNode(assetName, publishedNodeId, publishedNode.WrappedValue.TypeInfo.BuiltInType, publishedNode.Value.ToString());
                         }
                     }
                     catch (Exception ex)
@@ -235,7 +235,7 @@ namespace UACloudTwin
             }
         }
 
-        private void UpdateNode(string assetName, string publishedNodeId, string value)
+        private void UpdateNode(string assetName, string publishedNodeId, BuiltInType type, string value)
         {
             if (!string.IsNullOrEmpty(publishedNodeId) && (!string.IsNullOrEmpty(assetName)))
             {
@@ -244,10 +244,6 @@ namespace UACloudTwin
                     BasicDigitalTwin twin = new()
                     {
                         Id = DTDLEscapeAndTruncateString(publishedNodeId),
-                        Metadata =
-                        {
-                            ModelId = "dtmi:digitaltwins:opcua:node;1"
-                        },
                         Contents =
                         {
                             { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
@@ -258,6 +254,11 @@ namespace UACloudTwin
                         }
                     };
 
+                    switch (type)
+                    {
+                        default: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; break;
+                    }
+
                     if (CreateTwinIfRequired(twin, assetName))
                     {
                         // update twin
@@ -266,8 +267,8 @@ namespace UACloudTwin
                         {
                             string[] parts = publishedNodeId.Split('_');
 
-                            updateTwinData.AppendReplace("/OPCUADisplayName", parts[2]);
-                            updateTwinData.AppendReplace("/OPCUANodeId", parts[4]);
+                            updateTwinData.AppendReplace("/OPCUADisplayName", parts[0]);
+                            updateTwinData.AppendReplace("/OPCUANodeId", parts[2]);
                             updateTwinData.AppendReplace("/OPCUANodeValue", value);
 
                             _client.UpdateDigitalTwinAsync(DTDLEscapeAndTruncateString(publishedNodeId), updateTwinData).GetAwaiter().GetResult();

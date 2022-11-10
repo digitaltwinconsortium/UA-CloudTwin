@@ -1,0 +1,25 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:digitaltwins:opcua:node:double;1",
+  "@type": "Interface",
+  "displayName": "OPC UA Node for double precision floating point data",
+  "description": "An OPC UA Node of type double precision floating point within an OPC UA namespace within an OPC UA server.",
+  "extends": [ "dtmi:digitaltwins:isa95:WorkUnit;1" ],
+  "contents": [
+    {
+      "@type": "Property",
+      "name": "OPCUADisplayName",
+      "schema": "string"
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANodeId",
+      "schema": "string"
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANodeValue",
+      "schema": "double"
+    }
+  ]
+}
