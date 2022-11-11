@@ -25,6 +25,8 @@ namespace UACloudTwin
 
         private object _containsLock = new object();
 
+        private object _createLock = new object();
+
         public ADTClient(ILogger<ADTClient> logger)
         {
             _logger = logger;
@@ -119,69 +121,160 @@ namespace UACloudTwin
 
         public void AddAsset(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName)
         {
-            if (!string.IsNullOrEmpty(assetName) && !string.IsNullOrEmpty(publisherName))
+            if (string.IsNullOrEmpty(assetName) || string.IsNullOrEmpty(publisherName))
             {
-                _ = Task.Run(() =>
+                throw new ArgumentException();
+            }
+
+            _ = Task.Run(() =>
+            {
+                BasicDigitalTwin publisherTwin = new()
                 {
-                    BasicDigitalTwin publisherTwin = new()
-                    {
-                        Id = DTDLEscapeAndTruncateString(publisherName),
-                        Metadata =
+                    Id = DTDLEscapeAndTruncateString(publisherName),
+                    Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:isa95:Area;1"
                     },
-                        Contents =
+                    Contents =
                     {
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
                         { "equipmentLevel", "Area" }
                     }
-                    };
+                };
 
-                    CreateTwinIfRequired(publisherTwin);
+                CreateTwinIfRequired(publisherTwin);
 
-                    BasicDigitalTwin twin = new()
-                    {
-                        Id = DTDLEscapeAndTruncateString(assetName),
-                        Metadata =
+                BasicDigitalTwin twin = new()
+                {
+                    Id = DTDLEscapeAndTruncateString(assetName),
+                    Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:opcua:nodeset;1"
                     },
-                        Contents =
+                    Contents =
                     {
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
                         { "OPCUAApplicationURI", uaApplicationURI },
                         { "OPCUANamespaceURI", uaNamespaceURI },
                         { "equipmentLevel", "Work Center" }
                     }
-                    };
+                };
 
-                    CreateTwinIfRequired(twin, publisherTwin.Id);
-                });
-            }
+                CreateTwinIfRequired(twin, publisherTwin.Id);
+            });
         }
 
-        public void UpdateAssetTelemetry(string assetName, string publisherName, Dictionary<string, DataValue> publishedNodes)
+        public void UpdateAssetTelemetry(string assetName, string telemetryName, BuiltInType telemetryType, DataValue telemetryValue)
         {
-            if (!string.IsNullOrEmpty(assetName))
+            if (string.IsNullOrEmpty(assetName) || string.IsNullOrEmpty(telemetryName) || (telemetryType == BuiltInType.Null) || (telemetryValue == null))
             {
-                foreach (string publishedNodeId in publishedNodes.Keys)
-                {
-                    DataValue publishedNode = publishedNodes[publishedNodeId];
+                throw new ArgumentException();
+            }
 
+            _ = Task.Run(() =>
+            {
+                BasicDigitalTwin twin = new()
+                {
+                    Id = DTDLEscapeAndTruncateString(telemetryName),
+                    Contents =
+                    {
+                        { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                        { "equipmentLevel", "Work Unit" },
+                        { "OPCUADisplayName", string.Empty },
+                        { "OPCUANodeId", string.Empty }
+                    }
+                };
+
+                // map from OPC UA built-in types to DTDL primitive types
+                // see https://reference.opcfoundation.org/v104/Core/docs/Part6/5.1.2/
+                // and https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/dtdlv2.md#schemas
+                switch (telemetryType)
+                {
+                    case BuiltInType.Boolean: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:boolean;1"; twin.Contents.Add("OPCUANodeValue", false); break;
+                    case BuiltInType.DateTime: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:datetime;1"; twin.Contents.Add("OPCUANodeValue", DateTime.MinValue); break;
+                    case BuiltInType.String: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; twin.Contents.Add("OPCUANodeValue", string.Empty); break;
+                    case BuiltInType.LocalizedText: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; twin.Contents.Add("OPCUANodeValue", string.Empty); break;
+                    case BuiltInType.SByte: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.Int16: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.Int32: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.Int64: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:long;1"; twin.Contents.Add("OPCUANodeValue", (long) 0); break;
+                    case BuiltInType.Integer: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.Number: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.StatusCode: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.Byte: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.UInt16: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.UInt32: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.UInt64: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:long;1"; twin.Contents.Add("OPCUANodeValue", (long) 0); break;
+                    case BuiltInType.UInteger: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:integer;1"; twin.Contents.Add("OPCUANodeValue", 0); break;
+                    case BuiltInType.Float: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:float;1"; twin.Contents.Add("OPCUANodeValue", 0.0f); break;
+                    case BuiltInType.Double: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:double;1"; twin.Contents.Add("OPCUANodeValue", 0.0); break;
+                    case BuiltInType.Variant: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; twin.Contents.Add("OPCUANodeValue", string.Empty); break;
+                    case BuiltInType.DataValue: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; twin.Contents.Add("OPCUANodeValue", string.Empty); break;
+                    default: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; twin.Contents.Add("OPCUANodeValue", string.Empty); break;
+                }
+
+                if (CreateTwinIfRequired(twin, assetName))
+                {
+                    // update twin
+                    var updateTwinData = new JsonPatchDocument();
                     try
                     {
-                        if (publishedNode?.Value != null)
+                        string[] parts = telemetryName.Split('_');
+
+                        if (parts.Length > 1)
                         {
-                            // Update twin for each published node
-                            UpdateNode(assetName, publishedNodeId, publishedNode.WrappedValue.TypeInfo.BuiltInType, publishedNode.Value.ToString());
+                            updateTwinData.AppendReplace("/OPCUADisplayName", parts[1]);
                         }
+
+                        if (parts.Length > 2)
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeId", parts[2]);
+                        }
+
+                        // make sure we add the right value type
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:boolean;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", bool.Parse(telemetryValue.Value.ToString()));
+                        }
+
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:datetime;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", DateTime.Parse(telemetryValue.Value.ToString()));
+                        }
+
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:string;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", telemetryValue.Value.ToString());
+                        }
+
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:integer;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", int.Parse(telemetryValue.Value.ToString()));
+                        }
+
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:long;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", long.Parse(telemetryValue.Value.ToString()));
+                        }
+
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:float;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", float.Parse(telemetryValue.Value.ToString()));
+                        }
+
+                        if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:double;1")
+                        {
+                            updateTwinData.AppendReplace("/OPCUANodeValue", double.Parse(telemetryValue.Value.ToString()));
+                        }
+
+                        _client.UpdateDigitalTwinAsync(DTDLEscapeAndTruncateString(telemetryName), updateTwinData).GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogInformation($"Cannot add item {publishedNodeId}: {ex.Message}");
+                        _logger.LogError($"Error updating node twin: {DTDLEscapeAndTruncateString(telemetryName)} {ex} {JsonConvert.SerializeObject(updateTwinData)}");
                     }
                 }
-            }
+            });
         }
 
         private void CreateContainsRelationshipIfRequired(string childId, string parentId)
@@ -228,57 +321,10 @@ namespace UACloudTwin
                         }
                         catch (RequestFailedException ex)
                         {
-                            _logger.LogError("Error creating contains relationship: {parent} {child} {ex} {relationship}", DTDLEscapeAndTruncateString(parentId), DTDLEscapeAndTruncateString(childId), ex, JsonConvert.SerializeObject(relationship));
+                            _logger.LogError($"Error creating contains relationship: {DTDLEscapeAndTruncateString(parentId)} {DTDLEscapeAndTruncateString(childId)} {ex} {JsonConvert.SerializeObject(relationship)}");
                         }
                     }
                 }
-            }
-        }
-
-        private void UpdateNode(string assetName, string publishedNodeId, BuiltInType type, string value)
-        {
-            if (!string.IsNullOrEmpty(publishedNodeId) && (!string.IsNullOrEmpty(assetName)))
-            {
-                _ = Task.Run(() =>
-                {
-                    BasicDigitalTwin twin = new()
-                    {
-                        Id = DTDLEscapeAndTruncateString(publishedNodeId),
-                        Contents =
-                        {
-                            { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
-                            { "equipmentLevel", "Work Unit" },
-                            { "OPCUADisplayName","" },
-                            { "OPCUANodeId","" },
-                            { "OPCUANodeValue","" }
-                        }
-                    };
-
-                    switch (type)
-                    {
-                        default: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; break;
-                    }
-
-                    if (CreateTwinIfRequired(twin, assetName))
-                    {
-                        // update twin
-                        var updateTwinData = new JsonPatchDocument();
-                        try
-                        {
-                            string[] parts = publishedNodeId.Split('_');
-
-                            updateTwinData.AppendReplace("/OPCUADisplayName", parts[0]);
-                            updateTwinData.AppendReplace("/OPCUANodeId", parts[2]);
-                            updateTwinData.AppendReplace("/OPCUANodeValue", value);
-
-                            _client.UpdateDigitalTwinAsync(DTDLEscapeAndTruncateString(publishedNodeId), updateTwinData).GetAwaiter().GetResult();
-                        }
-                        catch (RequestFailedException ex)
-                        {
-                            _logger.LogError("Error updating node twin: {publishedNodeId} {ex} {twin}", DTDLEscapeAndTruncateString(publishedNodeId), ex, JsonConvert.SerializeObject(updateTwinData));
-                        }
-                    }
-                });
             }
         }
 
@@ -302,32 +348,30 @@ namespace UACloudTwin
                 // create only if it doesn't exist yet
                 if (!TwinExists(metaData.Id))
                 {
-                    try
+                    // lock this twin during creation to avoid race conditions
+                    lock (_createLock)
                     {
-                        _client.CreateOrReplaceDigitalTwin(metaData.Id, metaData);
-
-                        if (!string.IsNullOrEmpty(parent))
+                        if (!TwinExists(metaData.Id))
                         {
-                            CreateContainsRelationshipIfRequired(metaData.Id, parent);
+                            try
+                            {
+                                _client.CreateOrReplaceDigitalTwin(metaData.Id, metaData);
+                            }
+                            catch (RequestFailedException ex)
+                            {
+                                _logger.LogError($"Error creating twin: {DTDLEscapeAndTruncateString(metaData.Id)} {ex} {JsonConvert.SerializeObject(metaData)}");
+                                return false;
+                            }
                         }
-
-                        return true;
-                    }
-                    catch (RequestFailedException ex)
-                    {
-                        _logger.LogError("Error creating twin: {id} {ex} {twin}", DTDLEscapeAndTruncateString(metaData.Id), ex, JsonConvert.SerializeObject(metaData));
-                        return false;
                     }
                 }
-                else
+
+                if (!string.IsNullOrEmpty(parent))
                 {
-                    if (!string.IsNullOrEmpty(parent))
-                    {
-                        CreateContainsRelationshipIfRequired(metaData.Id, parent);
-                    }
-
-                    return true;
+                    CreateContainsRelationshipIfRequired(metaData.Id, parent);
                 }
+
+                return true;
             }
             else
             {

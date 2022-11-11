@@ -57,7 +57,7 @@ namespace UACloudTwin
         {
             string messagesPerSecondProcessed = (_messagesProcessed / 10).ToString();
             string timeStamp = _currentTimestamp.ToString();
-            _logger.LogInformation("Processed " + messagesPerSecondProcessed + " messages/second, current message timestamp: " + timeStamp);
+            _logger.LogInformation($"Processed {messagesPerSecondProcessed} messages/second, current message timestamp: {timeStamp}");
 
             lock (_hubClient.ChartEntries)
             {
@@ -286,7 +286,7 @@ namespace UACloudTwin
                 _dataSetReaders["default_uadp:0"].DataSetMetaData.Fields.Clear();
                 _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
 
-                string publisherID;
+                string publisherID = string.Empty;
                 if (encodedMessage is JsonNetworkMessage)
                 {
                     publisherID = ((JsonNetworkMessage)encodedMessage).PublisherId?.ToString();
@@ -296,94 +296,99 @@ namespace UACloudTwin
                     publisherID = ((UadpNetworkMessage)encodedMessage).PublisherId?.ToString();
                 }
 
-                // now flatten any complex types
                 foreach (UaDataSetMessage datasetmessage in encodedMessage.DataSetMessages)
                 {
-                    Dictionary<string, DataValue> flattenedPublishedNodes = new();
-
-                    // extract the asset name
                     string dataSetWriterId = datasetmessage.DataSetWriterId.ToString();
-                    string assetName = null;
-                    if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId.ToString()))
+                    string assetName = string.Empty;
+
+                    if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId))
                     {
-                        string name = _dataSetReaders[publisherID + ":" + dataSetWriterId.ToString()].DataSetMetaData.Name;
+                        string name = _dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Name;
                         assetName = name.Substring(0, name.LastIndexOf(';'));
                     }
                     else
                     {
-                        _logger.LogInformation($"No metadata message for {publisherID}:{dataSetWriterId} received yet!");
+                        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
+                        {
+                            // if we didn't reveice a valid asset name, we use the publisher ID instead, if configured by the user
+                            assetName = publisherID;
+                        }
+                        else
+                        {
+                            _logger.LogInformation($"No metadata message for {publisherID}:{dataSetWriterId} received yet!");
+                            continue;
+                        }
                     }
 
                     if (datasetmessage.DataSet != null)
                     {
-                        for (int i = 0; i < datasetmessage.DataSet.Fields.Count(); i++)
+                        for (int i = 0; i < datasetmessage.DataSet.Fields.Length; i++)
                         {
                             Field field = datasetmessage.DataSet.Fields[i];
-
                             if (field.Value != null)
                             {
+                                // if the timestamp in the field is missing, use the timestamp from the dataset message instead
                                 if (field.Value.SourceTimestamp == DateTime.MinValue)
                                 {
                                     field.Value.SourceTimestamp = datasetmessage.Timestamp;
                                 }
 
-                                if (field.FieldMetaData == null)
+                                // if we didn't receive valid metadata, we use the dataset writer ID and index into the dataset instead
+                                string telemetryName = string.Empty;
+                                BuiltInType type = BuiltInType.Variant;
+
+                                if (field.FieldMetaData == null || string.IsNullOrEmpty(field.FieldMetaData.Name))
                                 {
-                                    if (field.Value.WrappedValue.Value is Variant[])
-                                    {
-                                        foreach (Variant variant in (Variant[])field.Value.WrappedValue.Value)
-                                        {
-                                            string[] keyValue = (string[])variant.Value;
-                                            flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString() + "_" + keyValue[0], new DataValue(new Variant(keyValue[1])));
-                                        }
-                                    }
-                                    else
-                                    {
-                                        flattenedPublishedNodes.Add(publisherID + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString(), field.Value);
-                                    }
+                                    telemetryName = assetName + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString();
                                 }
                                 else
                                 {
+                                    telemetryName = assetName + "_" + field.FieldMetaData.Name + "_" + field.FieldMetaData.BinaryEncodingId.ToString();
+
+                                    // read the OPC UA type from the parsed metadata message in the dataset reader
+                                    if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId)
+                                    && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields != null)
+                                    && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields.Count > i)
+                                    && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields[i].BuiltInType != 0))
+                                    {
+                                        type = (BuiltInType)_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields[i].BuiltInType;
+                                    }
+                                    else
+                                    {
+                                        // default to variant
+                                        type = BuiltInType.Variant;
+                                    }
+                                }
+
+                                try
+                                {
+                                    // check for variant array
                                     if (field.Value.WrappedValue.Value is Variant[])
                                     {
-                                        int j = 0;
-                                        foreach (Variant variant in (Variant[])field.Value.WrappedValue.Value)
+                                        Variant[] array = (Variant[]) field.Value.WrappedValue.Value;
+                                        for (int j = 0; j < array.Length; j++)
                                         {
-                                            if (variant.Value is string[])
-                                            {
-                                                string[] keyValue = (string[])variant.Value;
-                                                if (keyValue != null)
-                                                {
-                                                    flattenedPublishedNodes.Add(field.FieldMetaData.Name + "_" + i.ToString() + "_" + keyValue[0] + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(keyValue[1])));
-                                                }
-                                            }
-                                            else
-                                            {
-                                                flattenedPublishedNodes.Add(field.FieldMetaData.Name + "_" + i.ToString() + "_" + j.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString(), new DataValue(new Variant(variant.Value.ToString())));
-                                            }
+                                            Variant variant = array[j];
+                                            telemetryName += "_" + j.ToString();
 
-                                            j++;
+                                            // convert to string
+                                            DataValue value = new DataValue(new Variant(variant.Value.ToString()));
+
+                                            _twinClient.UpdateAssetTelemetry(assetName, telemetryName, BuiltInType.Variant, value);
                                         }
                                     }
                                     else
                                     {
-                                        string key = field.FieldMetaData.Name + "_" + i.ToString() + "_" + field.FieldMetaData.BinaryEncodingId.ToString();
-                                        if (flattenedPublishedNodes.ContainsKey(key))
-                                        {
-                                            flattenedPublishedNodes[key] = field.Value;
-                                        }
-                                        else
-                                        {
-                                            flattenedPublishedNodes.Add(key, field.Value);
-                                        }
+                                        _twinClient.UpdateAssetTelemetry(assetName, telemetryName, type, field.Value);
                                     }
                                 }
-
+                                catch(Exception ex)
+                                {
+                                    _logger.LogError($"Cannot parse field {field.Value}: {ex.Message}");
+                                }
                             }
                         }
                     }
-
-                    _twinClient.UpdateAssetTelemetry(assetName, publisherID, flattenedPublishedNodes);
                 }
             }
         }

@@ -140,7 +140,7 @@ namespace UACloudTwin
             }
             catch (Exception ex)
             {
-                _logger.LogError("Failed to connect to MQTT broker: " + ex.Message);
+                _logger.LogError($"Failed to connect to MQTT broker: {ex.Message}");
 
                 return false;
             }
@@ -170,8 +170,6 @@ namespace UACloudTwin
         // handles all incoming messages
         private async Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs args)
         {
-            _logger.LogInformation($"Received message from topic: {args.ApplicationMessage.Topic}");
-
             try
             {
                 _uaMessageProcessor.ProcessMessage(args.ApplicationMessage.Payload, DateTime.UtcNow, args.ApplicationMessage.ContentType);

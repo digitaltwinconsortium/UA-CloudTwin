@@ -12,6 +12,6 @@ namespace UACloudTwin.Interfaces
 
         void AddAsset(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName);
 
-        void UpdateAssetTelemetry(string assetName, string publisherName, Dictionary<string, DataValue> telemetry);
+        void UpdateAssetTelemetry(string assetName, string telemetryName, BuiltInType telemetryType, DataValue telemetryValue);
     }
 }
