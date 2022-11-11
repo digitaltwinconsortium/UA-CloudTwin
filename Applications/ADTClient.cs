@@ -244,7 +244,11 @@ namespace UACloudTwin
 
                         if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:string;1")
                         {
-                            updateTwinData.AppendReplace("/OPCUANodeValue", telemetryValue.Value.ToString());
+                            // since string is our fallback/catchall, we need to check for nulls
+                            if (!string.IsNullOrEmpty(telemetryValue?.Value?.ToString()))
+                            {
+                                updateTwinData.AppendReplace("/OPCUANodeValue", telemetryValue.Value.ToString());
+                            }
                         }
 
                         if (twin.Metadata.ModelId == "dtmi:digitaltwins:opcua:node:integer;1")

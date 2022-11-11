@@ -15,6 +15,7 @@ The following environment variables can be defined:
 * METADATA_TOPIC - (optional) the broker metadata topic to read messages from
 * USE_MQTT - (optional) Read OPC UA PubSub telementry messages from an MQTT borker instead of a Kafka broker
 * USE_TLS - (optional) set to 1 to use Transport Layer Security
+* IGNORE_MISSING_METADATA - (optional) set to 1 to parse messages even if no metadata was sent for the messages
 
 Alternatively, if an Azure IoT Hub or Azure Event Hubs are used for the broker, the Azure Event Hub connection string can be specified in the UI to avoid the need to specify the above environment variables. The Azure Event Hub connection string can be read in the Azure Portal for IoT Hub under Built-in Endpoints -> Event Hub-compatible endpoint and for Azure Event Hubs under Shared Access Policies -> RootManageSharedAccessKey -> Connection string-primary key.
 
