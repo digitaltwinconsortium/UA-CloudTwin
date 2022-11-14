@@ -363,19 +363,12 @@ namespace UACloudTwin
                                 try
                                 {
                                     // check for variant array
-                                    if (field.Value.WrappedValue.Value is Variant[])
+                                    if (field.Value.Value is Variant[])
                                     {
-                                        Variant[] array = (Variant[]) field.Value.WrappedValue.Value;
-                                        for (int j = 0; j < array.Length; j++)
-                                        {
-                                            Variant variant = array[j];
-                                            telemetryName += "_" + j.ToString();
+                                        // convert to string
+                                        DataValue value = new DataValue(new Variant(field.Value.ToString()), field.Value.StatusCode, field.Value.SourceTimestamp);
 
-                                            // convert to string
-                                            DataValue value = new DataValue(new Variant(variant.Value.ToString()));
-
-                                            _twinClient.UpdateAssetTelemetry(assetName, telemetryName, BuiltInType.Variant, value);
-                                        }
+                                        _twinClient.UpdateAssetTelemetry(assetName, telemetryName, BuiltInType.String, value);
                                     }
                                     else
                                     {
