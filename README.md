@@ -1,5 +1,5 @@
 # UA Cloud Twin
-A cloud-based Digital Twin Definition Language (DTDL) adapter for OPC UA data. It connects to an MQTT or Kafka broker, subscribes to a topic containing OPC UA PubSub telemetry messages, parses these messages and automatically extraxcts OPC UA-enables asset names from the telemetry stream and then creates digital twins for each asset indetified in Azure Digital Twins service in DTDL format. It then proceeds to update telemetry "tags" for each digital twin created with the relevant OPC UA PubSub datasets, all fully automatically.
+A cloud-based Digital Twin Definition Language (DTDL) adapter for OPC UA data. It connects to an MQTT or Kafka broker, subscribes to a topic containing OPC UA PubSub telemetry messages, parses these messages and automatically extracts OPC UA-enables asset names from the telemetry stream and then creates digital twins for each asset indentified in Azure Digital Twins service in DTDL format, leveraging the ISA95 ontology. It then proceeds to update telemetry "tags" for each digital twin created with the relevant OPC UA PubSub datasets, all fully automatically.
 
 
 ## Installation
