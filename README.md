@@ -24,7 +24,7 @@ Alternatively, if an Azure IoT Hub or Azure Event Hubs are used for the broker, 
 
 Run it on a Docker-enabled computer via:
 
-`docker run -e anEnvironmentVariableFromAbove="yourSetting" -p 80:80 ghcr.io/digitaltwinconsortium/ua-cloudtwin:main`
+   docker run -e anEnvironmentVariableFromAbove="yourSetting" -p 80:80 ghcr.io/digitaltwinconsortium/ua-cloudtwin:main
 
 Alternatively,  you can run it in a Docker-enabled web application in the Cloud.
 
