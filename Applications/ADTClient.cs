@@ -4,6 +4,7 @@ namespace UACloudTwin
     using Azure;
     using Azure.DigitalTwins.Core;
     using Azure.Identity;
+    using Extensions;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
@@ -128,9 +129,10 @@ namespace UACloudTwin
 
             _ = Task.Run(() =>
             {
+                // create area twin for publisher
                 BasicDigitalTwin publisherTwin = new()
                 {
-                    Id = DTDLEscapeAndTruncateString(publisherName),
+                    Id = publisherName.GetDeterministicHashCode().ToString(),
                     Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:isa95:Area;1"
@@ -138,15 +140,17 @@ namespace UACloudTwin
                     Contents =
                     {
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
-                        { "equipmentLevel", "Area" }
+                        { "equipmentLevel", "Area" },
+                        { "equipmentID", publisherName },
                     }
                 };
 
-                CreateTwinIfRequired(publisherTwin);
+                CreateTwinIfRequired(publisherTwin, publisherName.GetDeterministicHashCode(), 0);
 
-                BasicDigitalTwin twin = new()
+                // create nodeset twin for asset
+                BasicDigitalTwin assetTwin = new()
                 {
-                    Id = DTDLEscapeAndTruncateString(assetName),
+                    Id = assetName.GetDeterministicHashCode().ToString(),
                     Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:opcua:nodeset;1"
@@ -156,11 +160,12 @@ namespace UACloudTwin
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
                         { "OPCUAApplicationURI", uaApplicationURI },
                         { "OPCUANamespaceURI", uaNamespaceURI },
-                        { "equipmentLevel", "Work Center" }
+                        { "equipmentLevel", "Work Center" },
+                        { "equipmentID", assetName },
                     }
                 };
 
-                CreateTwinIfRequired(twin, publisherTwin.Id);
+                CreateTwinIfRequired(assetTwin, assetName.GetDeterministicHashCode(), publisherName.GetDeterministicHashCode());
             });
         }
 
@@ -175,11 +180,12 @@ namespace UACloudTwin
             {
                 BasicDigitalTwin twin = new()
                 {
-                    Id = DTDLEscapeAndTruncateString(telemetryName),
+                    Id = telemetryName.GetDeterministicHashCode().ToString(),
                     Contents =
                     {
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
                         { "equipmentLevel", "Work Unit" },
+                        { "equipmentID", telemetryName },
                         { "OPCUADisplayName", string.Empty },
                         { "OPCUANodeId", string.Empty }
                     }
@@ -213,13 +219,13 @@ namespace UACloudTwin
                     default: twin.Metadata.ModelId = "dtmi:digitaltwins:opcua:node:string;1"; twin.Contents.Add("OPCUANodeValue", string.Empty); break;
                 }
 
-                if (CreateTwinIfRequired(twin, assetName))
+                if (CreateTwinIfRequired(twin, telemetryName.GetDeterministicHashCode(), assetName.GetDeterministicHashCode()))
                 {
                     // update twin
                     var updateTwinData = new JsonPatchDocument();
                     try
                     {
-                        string[] parts = telemetryName.Split('_');
+                        string[] parts = telemetryName.Split(';');
 
                         if (parts.Length > 1)
                         {
@@ -271,19 +277,19 @@ namespace UACloudTwin
                             updateTwinData.AppendReplace("/OPCUANodeValue", double.Parse(telemetryValue.Value.ToString()));
                         }
 
-                        _client.UpdateDigitalTwinAsync(DTDLEscapeAndTruncateString(telemetryName), updateTwinData).GetAwaiter().GetResult();
+                        _client.UpdateDigitalTwinAsync(telemetryName.GetDeterministicHashCode().ToString(), updateTwinData).GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError($"Error updating node twin: {DTDLEscapeAndTruncateString(telemetryName)} {ex} {JsonConvert.SerializeObject(updateTwinData)}");
+                        _logger.LogError($"Error updating node twin: {telemetryName.GetDeterministicHashCode()} {ex} {JsonConvert.SerializeObject(updateTwinData)}");
                     }
                 }
             });
         }
 
-        private void CreateContainsRelationshipIfRequired(string childId, string parentId)
+        private void CreateContainsRelationshipIfRequired(uint childId, uint parentId)
         {
-            if (_modelsUploaded && !string.IsNullOrEmpty(childId) && !string.IsNullOrEmpty(parentId) && TwinExists(parentId))
+            if (_modelsUploaded && TwinExists(parentId))
             {
                 // serialize access to contains relationship check and creation to avoid duplicates due to race conditions
                 lock (_containsLock)
@@ -292,11 +298,11 @@ namespace UACloudTwin
                     {
                         bool relationshipExists = false;
 
-                        Pageable<BasicRelationship> existingRelationships = _client.GetRelationships<BasicRelationship>(DTDLEscapeAndTruncateString(parentId));
+                        Pageable<BasicRelationship> existingRelationships = _client.GetRelationships<BasicRelationship>(parentId.ToString());
 
                         foreach (BasicRelationship existingRelationship in existingRelationships)
                         {
-                            if ((existingRelationship.TargetId == DTDLEscapeAndTruncateString(childId)) && (existingRelationship.Name == "contains"))
+                            if ((existingRelationship.TargetId == childId.ToString()) && (existingRelationship.Name == "contains"))
                             {
                                 relationshipExists = true;
                                 break;
@@ -313,30 +319,30 @@ namespace UACloudTwin
                         string id = Guid.NewGuid().ToString();
                         BasicRelationship relationship = new()
                         {
-                            Id = DTDLEscapeAndTruncateString(id),
-                            SourceId = DTDLEscapeAndTruncateString(parentId),
-                            TargetId = DTDLEscapeAndTruncateString(childId),
+                            Id = id,
+                            SourceId = parentId.ToString(),
+                            TargetId = childId.ToString(),
                             Name = "contains"
                         };
 
                         try
                         {
-                            _client.CreateOrReplaceRelationship(DTDLEscapeAndTruncateString(parentId), DTDLEscapeAndTruncateString(id), relationship);
+                            _client.CreateOrReplaceRelationship(parentId.ToString(), id, relationship);
                         }
-                        catch (RequestFailedException ex)
+                        catch (Exception ex)
                         {
-                            _logger.LogError($"Error creating contains relationship: {DTDLEscapeAndTruncateString(parentId)} {DTDLEscapeAndTruncateString(childId)} {ex} {JsonConvert.SerializeObject(relationship)}");
+                            _logger.LogError($"Error creating contains relationship: {parentId} {childId} {ex} {JsonConvert.SerializeObject(relationship)}");
                         }
                     }
                 }
             }
         }
 
-        private bool TwinExists(string id)
+        private bool TwinExists(uint id)
         {
             try
             {
-                Response<BasicDigitalTwin> twin = _client.GetDigitalTwin<BasicDigitalTwin>(DTDLEscapeAndTruncateString(id));
+                Response<BasicDigitalTwin> twin = _client.GetDigitalTwin<BasicDigitalTwin>(id.ToString());
                 return twin != null;
             }
             catch (RequestFailedException)
@@ -345,34 +351,34 @@ namespace UACloudTwin
             }
         }
 
-        private bool CreateTwinIfRequired(BasicDigitalTwin metaData, string parent = null)
+        private bool CreateTwinIfRequired(BasicDigitalTwin metaData, uint id, uint parentId)
         {
             if (_modelsUploaded)
             {
                 // create only if it doesn't exist yet
-                if (!TwinExists(metaData.Id))
+                if (!TwinExists(id))
                 {
                     // lock this twin during creation to avoid race conditions
                     lock (_createLock)
                     {
-                        if (!TwinExists(metaData.Id))
+                        if (!TwinExists(id))
                         {
                             try
                             {
                                 _client.CreateOrReplaceDigitalTwin(metaData.Id, metaData);
                             }
-                            catch (RequestFailedException ex)
+                            catch (Exception ex)
                             {
-                                _logger.LogError($"Error creating twin: {DTDLEscapeAndTruncateString(metaData.Id)} {ex} {JsonConvert.SerializeObject(metaData)}");
+                                _logger.LogError($"Error creating twin: {id} {ex} {JsonConvert.SerializeObject(metaData)}");
                                 return false;
                             }
                         }
                     }
                 }
 
-                if (!string.IsNullOrEmpty(parent))
+                if (parentId != 0)
                 {
-                    CreateContainsRelationshipIfRequired(metaData.Id, parent);
+                    CreateContainsRelationshipIfRequired(id, parentId);
                 }
 
                 return true;
@@ -380,20 +386,6 @@ namespace UACloudTwin
             else
             {
                 return false;
-            }
-        }
-
-        private string DTDLEscapeAndTruncateString(string input)
-        {
-            string escapedString = input.Replace(":", "_").Replace(";", "_").Replace(".", "_").Replace("/", "_").Replace("\\", "_").Replace("=", "_");
-
-            if (escapedString.Length >= 128)
-            {
-                return escapedString.Substring(0, 127);
-            }
-            else
-            {
-                return escapedString;
             }
         }
     }

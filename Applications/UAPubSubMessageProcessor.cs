@@ -226,12 +226,12 @@ namespace UACloudTwin
                 {
                     string[] parts = metadata.Name.Split(';');
                     uaApplicationURI = parts[0];
-                    assetName = parts[0];
+                    assetName = uaApplicationURI;
 
                     if (parts.Length > 1)
                     {
                         uaNamespaceURI = parts[1];
-                        assetName += ('_' + parts[1]);
+                        assetName += ';' + uaNamespaceURI;
                     }
                 }
             }
@@ -339,11 +339,11 @@ namespace UACloudTwin
 
                                 if (field.FieldMetaData == null || string.IsNullOrEmpty(field.FieldMetaData.Name))
                                 {
-                                    telemetryName = assetName + "_" + datasetmessage.DataSetWriterId.ToString() + "_" + i.ToString();
+                                    telemetryName = assetName + ";" + datasetmessage.DataSetWriterId.ToString() + ";" + i.ToString();
                                 }
                                 else
                                 {
-                                    telemetryName = assetName + "_" + field.FieldMetaData.Name + "_" + field.FieldMetaData.BinaryEncodingId.ToString();
+                                    telemetryName = assetName + ";" + field.FieldMetaData.Name + ";" + field.FieldMetaData.BinaryEncodingId.ToString();
 
                                     // read the OPC UA type from the parsed metadata message in the dataset reader
                                     if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId)
