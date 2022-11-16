@@ -277,6 +277,8 @@ namespace UACloudTwin
                             updateTwinData.AppendReplace("/OPCUANodeValue", double.Parse(telemetryValue.Value.ToString()));
                         }
 
+                        updateTwinData.AppendReplace("/$metadata/OPCUANodeValue/sourceTime", telemetryValue.SourceTimestamp.ToString("o"));
+
                         _client.UpdateDigitalTwinAsync(telemetryName.GetDeterministicHashCode().ToString(), updateTwinData).GetAwaiter().GetResult();
                     }
                     catch (Exception ex)
