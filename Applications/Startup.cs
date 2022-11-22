@@ -40,7 +40,6 @@ namespace UACloudTwin
                     options.CallbackPath = "/signin-oidc";
                     options.TenantId = Configuration["AZURE_TENANT_ID"];
                     options.ClientId = Configuration["AZURE_CLIENT_ID"];
-                    options.ClientSecret = Configuration["AZURE_CLIENT_SECRET"];
                 });
 
             services.AddAuthorization();
