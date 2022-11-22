@@ -85,6 +85,8 @@ namespace UACloudTwin
 
             app.UseHttpsRedirection();
 
+            app.UseForwardedHeaders();
+
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -92,8 +94,6 @@ namespace UACloudTwin
             app.UseAuthentication();
 
             app.UseAuthorization();
-
-            app.UseForwardedHeaders();
 
             _ = Task.Run(() => subscriber.Run());
 
