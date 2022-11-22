@@ -85,6 +85,8 @@ namespace UACloudTwin
 
             app.UseAuthorization();
 
+            app.UseHttpsRedirection();
+
             _ = Task.Run(() => subscriber.Run());
 
             _ = Task.Run(() => twinClient.UploadTwinModels());
