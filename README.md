@@ -13,6 +13,8 @@ The following environment variables **must** be defined:
 * AZURE_CLIENT_ID - the Azure client ID of UA Cloud Twin. A client ID can be created through AAD app registration in the Azure portal under Azure Active Directory -> Overview -> Add -> App Registration
 * AZURE_CLIENT_SECRET - the Azure client secret of UA Cloud Twin. A client secret can be added after AAD app registration under Add a certificate or secret -> New client secret
 
+To successfully connect to an Azure Digital Twins service instance, the above AAD app registration must be assigned to the Azure Digital Twins Data Owner role.
+
 The following environment variables **can optionally** be defined:
 
 * BROKER_NAME - the name of the broker to use
