@@ -5,6 +5,7 @@ namespace UACloudTwin
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.HttpOverrides;
     using Microsoft.AspNetCore.Mvc.Authorization;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -72,9 +73,9 @@ namespace UACloudTwin
                 app.UseExceptionHandler("/Shared/Error");
             }
 
-            app.UseHttpsRedirection();
-
             app.UseHsts();
+
+            app.UseHttpsRedirection();
 
             app.UseStaticFiles();
 
@@ -84,7 +85,10 @@ namespace UACloudTwin
 
             app.UseAuthorization();
 
-            app.UseHttpsRedirection();
+            app.UseForwardedHeaders(new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto
+            });
 
             _ = Task.Run(() => subscriber.Run());
 
