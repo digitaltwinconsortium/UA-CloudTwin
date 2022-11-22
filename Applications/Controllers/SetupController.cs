@@ -1,11 +1,13 @@
 ﻿
 namespace UACloudTwin.Controllers
 {
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using System;
     using UACloudTwin.Interfaces;
     using UACloudTwin.Models;
 
+    [Authorize]
     public class SetupController : Controller
     {
         private readonly IDigitalTwinClient _twinclient;

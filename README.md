@@ -3,9 +3,17 @@ A cloud-based Digital Twin Definition Language (DTDL) adapter for OPC UA data. I
 
 UA Cloud Twin creates a digital twin for each namespace in each OPC UA server discovered within the OPC UA PubSub telemetry stream it reads from the broker, so for best results give each asset connected to your OPC UA servers its own namespace.
 
+UA Cloud Twin uses Azure Active Directory (AAD) authentication by default, but other authentication providers can be added, please let us know what you would like and open a feature request as an issue on GitHub. UA Cloud Twin also uses authorization for the Web UI it contains.
+
 ## Installation
 
-The following environment variables can be defined:
+The following environment variables **must** be defined:
+
+* AZURE_TENANT_ID - the Azure tenant ID of your AAD instance. This can be retrieved from the Azure portal under Azure Active Directory -> Overview
+* AZURE_CLIENT_ID - the Azure client ID of UA Cloud Twin. A client ID can be created through AAD app registration in the Azure portal under Azure Active Directory -> Overview -> Add -> App Registration
+* AZURE_CLIENT_SECRET - the Azure client secret of UA Cloud Twin. A client secret can be added after AAD app registration under Add a certificate or secret -> New client secret
+
+The following environment variables **can optionally** be defined:
 
 * BROKER_NAME - the name of the broker to use
 * BROKER_PORT - the port number of the broker
@@ -26,11 +34,11 @@ Run it on a Docker-enabled computer via:
 
     docker run -e anEnvironmentVariableFromAbove="yourSetting" -p 80:80 ghcr.io/digitaltwinconsortium/ua-cloudtwin:main
 
-Alternatively,  you can run it in a Docker-enabled web application in the Cloud.
+Alternatively, you can run it in a Docker-enabled web application in the Cloud.
 
 Then point your web browser to <http://yourIPAddress>
 
-You can optionally supply the following query parameters:
+You can optionally supply the following query parameters in the Url:
 
 * `?endpoint=your-broker-connection-string` - the connection strng of the broker to use
 * `?instanceurl=your-adt-instance-url` - the URL of the Azure Digital Twins instance to use

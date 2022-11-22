@@ -1,11 +1,15 @@
 
 namespace UACloudTwin
 {
+    using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Mvc.Authorization;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Identity.Web;
     using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
 
@@ -21,7 +25,25 @@ namespace UACloudTwin
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllersWithViews();
+            services.AddControllersWithViews(options =>
+            {
+                var policy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .Build();
+                options.Filters.Add(new AuthorizeFilter(policy));
+            });
+
+            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApp(options =>
+                {
+                    options.Instance = "https://login.microsoftonline.com/";
+                    options.CallbackPath = "/signin-oidc";
+                    options.TenantId = Configuration["AZURE_TENANT_ID"];
+                    options.ClientId = Configuration["AZURE_CLIENT_ID"];
+                    options.ClientSecret = Configuration["AZURE_CLIENT_SECRET"];
+                });
+
+            services.AddAuthorization();
 
             services.AddSignalR();
 
@@ -59,6 +81,8 @@ namespace UACloudTwin
             app.UseStaticFiles();
 
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
