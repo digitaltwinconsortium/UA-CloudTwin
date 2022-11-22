@@ -37,7 +37,7 @@ namespace UACloudTwin
                 .AddMicrosoftIdentityWebApp(options =>
                 {
                     options.Instance = "https://login.microsoftonline.com/";
-                    options.CallbackPath = "/signin-oidc";
+                    //options.CallbackPath = "/signin-oidc";
                     options.TenantId = Configuration["AZURE_TENANT_ID"];
                     options.ClientId = Configuration["AZURE_CLIENT_ID"];
                 });
