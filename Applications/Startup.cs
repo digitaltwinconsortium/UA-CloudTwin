@@ -45,6 +45,14 @@ namespace UACloudTwin
 
             services.AddAuthorization();
 
+            services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                                           ForwardedHeaders.XForwardedProto;
+                options.KnownNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
+
             services.AddSignalR();
 
             services.AddSingleton<IMessageProcessor, UAPubSubMessageProcessor>();
@@ -85,10 +93,7 @@ namespace UACloudTwin
 
             app.UseAuthorization();
 
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.All
-            });
+            app.UseForwardedHeaders();
 
             _ = Task.Run(() => subscriber.Run());
 
