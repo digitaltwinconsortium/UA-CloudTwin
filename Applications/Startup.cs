@@ -87,7 +87,7 @@ namespace UACloudTwin
 
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
-                ForwardedHeaders = ForwardedHeaders.XForwardedProto
+                ForwardedHeaders = ForwardedHeaders.All
             });
 
             _ = Task.Run(() => subscriber.Run());
