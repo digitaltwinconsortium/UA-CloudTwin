@@ -11,6 +11,7 @@ namespace UACloudTwin
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Identity.Web;
+    using Microsoft.IdentityModel.Protocols.OpenIdConnect;
     using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
 
@@ -39,6 +40,7 @@ namespace UACloudTwin
                 {
                     options.Instance = "https://login.microsoftonline.com/";
                     options.CallbackPath = "/signin-oidc";
+                    options.ResponseType = OpenIdConnectResponseType.IdTokenToken;
                     options.TenantId = Configuration["AZURE_TENANT_ID"];
                     options.ClientId = Configuration["AZURE_CLIENT_ID"];
                 });
