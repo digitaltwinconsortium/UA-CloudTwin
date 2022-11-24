@@ -12,19 +12,19 @@ namespace UACloudTwin.Controllers
 
     public class AuthController : Controller
     {
-        public IActionResult Index()
+        public IActionResult Index(string returnUrl)
         {
-            return View();
+            return View(new StatusModel() { Status = returnUrl });
         }
 
-        public IActionResult Login(string username, string password)
+        public IActionResult Login(string username, string password, string returnUrl)
         {
             if (ModelState.IsValid)
             {
                 if (!AuthenticateUser(username, password))
                 {
                     ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                   return View("Error", new ErrorViewModel() { RequestId="Access Denied!" });
+                   return View("Error", new StatusModel() { Status = "Access Denied!" });
                 }
 
                 var claims = new List<Claim>
@@ -46,7 +46,7 @@ namespace UACloudTwin.Controllers
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties).GetAwaiter().GetResult();
 
-                return RedirectToAction("Index", "Diag");
+                return RedirectToAction("Index", returnUrl);
             }
 
             return View();

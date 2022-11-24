@@ -1,4 +1,4 @@
-﻿@using UACloudTwin.Models
+﻿@model StatusModel
 
 @{
     ViewData["Title"] = "Login";
@@ -20,6 +20,9 @@
             <p />
             <p>
                 <input id="loginButton" class="btn btn-primary btn_browser" type="submit" value="Login">
+            <p />
+            <p>
+                @Html.Hidden("returnUrl", Model.Status)<br />
             <p />
         </div>
     }

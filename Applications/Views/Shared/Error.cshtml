@@ -1,13 +1,12 @@
-﻿@model ErrorViewModel
+﻿@model StatusModel
+
 @{
     ViewData["Title"] = "Error";
 }
 
 <h1 class="text-danger">Error</h1>
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <h2 class="text-danger">@Model.RequestId</h2>
-    </p>
-}
+<p>
+    <h2 class="text-danger">@Model.Status</h2>
+</p>
+
