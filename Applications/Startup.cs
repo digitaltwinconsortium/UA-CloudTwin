@@ -1,14 +1,14 @@
 
 namespace UACloudTwin
 {
-    using Microsoft.AspNetCore.Authentication;
+    using Microsoft.AspNetCore.Authentication.Cookies;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.HttpOverrides;
-    using Microsoft.AspNetCore.Identity;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using System;
     using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
 
@@ -26,18 +26,15 @@ namespace UACloudTwin
         {
             services.AddControllersWithViews();
 
-           // // Setup database context for ASP.NetCore Identity Scaffolding
-           //services.AddDbContext<UACloudTwinContext>(ServiceLifetime.Transient);
+            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Auth";
+                    options.AccessDeniedPath = "/Shared/Error";
+                    options.ExpireTimeSpan = TimeSpan.FromHours(1);
+                });
 
-           // services.AddDefaultIdentity<IdentityUser>(options =>
-           //         //require confirmation mail if sendgrid API Key is set
-           //         options.SignIn.RequireConfirmedAccount = !string.IsNullOrEmpty(Configuration["SendGridAPIKey"])
-           //         ).AddEntityFrameworkStores<UACloudTwinContext>();
-
-            //services.AddAuthentication()
-            //    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
-
-            //services.AddAuthorization();
+            services.AddAuthorization();
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -85,9 +82,9 @@ namespace UACloudTwin
 
             app.UseRouting();
 
-            //app.UseAuthentication();
+            app.UseAuthentication();
 
-            //app.UseAuthorization();
+            app.UseAuthorization();
 
             _ = Task.Run(() => subscriber.Run());
 

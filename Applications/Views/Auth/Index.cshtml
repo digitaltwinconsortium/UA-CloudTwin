@@ -1,0 +1,26 @@
+﻿@using UACloudTwin.Models
+
+@{
+    ViewData["Title"] = "Login";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="row browser_top_container">
+    @using (Html.BeginForm("Login", "Auth"))
+    {
+        <div class="browser_connect_selection_textbox">
+            <p>
+                Username<br />
+                @Html.TextBox("username", null, new { style = "width:100%;" })<br />
+            <p />
+            <p>
+                Password<br />
+                @Html.Password("password", null, new { style = "width:100%;" })<br />
+            <p />
+            <p>
+                <input id="loginButton" class="btn btn-primary btn_browser" type="submit" value="Login">
+            <p />
+        </div>
+    }
+</div>
