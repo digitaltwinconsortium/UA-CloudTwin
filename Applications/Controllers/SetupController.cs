@@ -48,8 +48,20 @@ namespace UACloudTwin.Controllers
                     Environment.SetEnvironmentVariable("BROKER_PASSWORD", endpoint);
                     Environment.SetEnvironmentVariable("BROKER_PORT", "9093");
                     Environment.SetEnvironmentVariable("CLIENT_NAME", "uacloudtwin");
-                    Environment.SetEnvironmentVariable("BROKER_NAME", parts[0].Substring(parts[0].IndexOf('=') + 6).TrimEnd('/'));
-                    Environment.SetEnvironmentVariable("TOPIC", parts[3].Substring(parts[3].IndexOf('=') + 1));
+
+                    string brokerName = parts[0].Substring(parts[0].IndexOf('=') + 6).TrimEnd('/');
+
+                    if (brokerName.StartsWith("iothub"))
+                    {
+                        Environment.SetEnvironmentVariable("TOPIC", parts[3].Substring(parts[3].IndexOf('=') + 1));
+                    }
+                    else
+                    {
+                        Environment.SetEnvironmentVariable("TOPIC", "data");
+                        Environment.SetEnvironmentVariable("METADATA_TOPIC", "metadata");
+                    }
+
+                    Environment.SetEnvironmentVariable("BROKER_NAME", brokerName);
                 }
 
                 SetupModel adtModel = new SetupModel
