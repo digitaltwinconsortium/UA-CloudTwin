@@ -7,7 +7,7 @@ namespace UACloudTwin.Controllers
     using UACloudTwin.Interfaces;
     using UACloudTwin.Models;
 
-    [Authorize]
+  //  [Authorize]
     public class SetupController : Controller
     {
         private readonly IDigitalTwinClient _twinclient;

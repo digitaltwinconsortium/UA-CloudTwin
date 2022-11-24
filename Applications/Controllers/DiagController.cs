@@ -5,7 +5,7 @@ namespace UACloudTwin.Controllers
     using Microsoft.AspNetCore.Mvc;
     using UACloudTwin.Interfaces;
 
-    [Authorize]
+   // [Authorize]
     public class DiagController : Controller
     {
         private readonly IMessageProcessor _processor;

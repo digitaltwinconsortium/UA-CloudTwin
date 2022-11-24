@@ -1,17 +1,14 @@
 
 namespace UACloudTwin
 {
-    using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-    using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Authentication;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.HttpOverrides;
-    using Microsoft.AspNetCore.Mvc.Authorization;
+    using Microsoft.AspNetCore.Identity;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
-    using Microsoft.Identity.Web;
-    using Microsoft.IdentityModel.Protocols.OpenIdConnect;
     using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
 
@@ -27,25 +24,20 @@ namespace UACloudTwin
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllersWithViews(options =>
-            {
-                var policy = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .Build();
-                options.Filters.Add(new AuthorizeFilter(policy));
-            });
+            services.AddControllersWithViews();
 
-            services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-                .AddMicrosoftIdentityWebApp(options =>
-                {
-                    options.Instance = "https://login.microsoftonline.com/";
-                    options.CallbackPath = "/signin-oidc";
-                    options.ResponseType = OpenIdConnectResponseType.IdTokenToken;
-                    options.TenantId = Configuration["AZURE_TENANT_ID"];
-                    options.ClientId = Configuration["AZURE_CLIENT_ID"];
-                });
+           // // Setup database context for ASP.NetCore Identity Scaffolding
+           //services.AddDbContext<UACloudTwinContext>(ServiceLifetime.Transient);
 
-            services.AddAuthorization();
+           // services.AddDefaultIdentity<IdentityUser>(options =>
+           //         //require confirmation mail if sendgrid API Key is set
+           //         options.SignIn.RequireConfirmedAccount = !string.IsNullOrEmpty(Configuration["SendGridAPIKey"])
+           //         ).AddEntityFrameworkStores<UACloudTwinContext>();
+
+            //services.AddAuthentication()
+            //    .AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
+            //services.AddAuthorization();
 
             services.Configure<ForwardedHeadersOptions>(options =>
             {
@@ -93,9 +85,9 @@ namespace UACloudTwin
 
             app.UseRouting();
 
-            app.UseAuthentication();
+            //app.UseAuthentication();
 
-            app.UseAuthorization();
+            //app.UseAuthorization();
 
             _ = Task.Run(() => subscriber.Run());
 

@@ -3,12 +3,14 @@ A cloud-based Digital Twin Definition Language (DTDL) adapter for OPC UA data. I
 
 UA Cloud Twin creates a digital twin for each namespace in each OPC UA server discovered within the OPC UA PubSub telemetry stream it reads from the broker, so for best results give each asset connected to your OPC UA servers its own namespace.
 
-UA Cloud Twin uses Azure Active Directory (AAD) authentication by default, but other authentication providers can be added, please let us know what you would like and open a feature request as an issue on GitHub. UA Cloud Twin also uses authorization for the Web UI it contains.
+UA Cloud Twin uses username and password authentication by default, but other authentication providers can be added, please let us know what you would like and open a feature request as an issue on GitHub.
 
 ## Installation
 
 The following environment variables **must** be defined:
 
+* ADMIN_USERNAME - the name for the admin of UA Cloud Twin
+* ADMIN_PASSWORD - the password of the admin of UA Cloud Twin
 * AZURE_TENANT_ID - the Azure tenant ID of your AAD instance. This can be retrieved from the Azure portal under Azure Active Directory -> Overview
 * AZURE_CLIENT_ID - the Azure client ID of UA Cloud Twin. A client ID can be created through AAD app registration in the Azure portal under Azure Active Directory -> Overview -> Add -> App Registration
 * AZURE_CLIENT_SECRET - the Azure client secret of UA Cloud Twin. A client secret can be added after AAD app registration under Add a certificate or secret -> New client secret
