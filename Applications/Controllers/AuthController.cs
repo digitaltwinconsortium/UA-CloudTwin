@@ -46,7 +46,7 @@ namespace UACloudTwin.Controllers
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties).GetAwaiter().GetResult();
 
-                return RedirectToAction("Index", returnUrl);
+                return Redirect(returnUrl);
             }
 
             return View();
