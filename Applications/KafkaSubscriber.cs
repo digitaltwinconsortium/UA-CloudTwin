@@ -98,13 +98,8 @@ namespace UACloudTwin
                 // create Kafka client
                 var conf = new ConsumerConfig
                 {
-                    GroupId = "consumer-group",
+                    GroupId = Environment.GetEnvironmentVariable("CLIENT_NAME"),
                     BootstrapServers = Environment.GetEnvironmentVariable("BROKER_NAME") + ":" + Environment.GetEnvironmentVariable("BROKER_PORT"),
-                    // Note: The AutoOffsetReset property determines the start offset in the event
-                    // there are not yet any committed offsets for the consumer group for the
-                    // topic/partitions of interest. By default, offsets are committed
-                    // automatically, so in this example, consumption will only start from the
-                    // earliest message in the topic 'my-topic' the first time you run the program.
                     AutoOffsetReset = AutoOffsetReset.Earliest,
                     SecurityProtocol = SecurityProtocol.SaslSsl,
                     SaslMechanism = SaslMechanism.Plain,
