@@ -8,6 +8,7 @@ namespace UACloudTwin
     using System.Text;
     using System.Threading;
     using UACloudTwin.Interfaces;
+    using static Confluent.Kafka.ConfigPropertyNames;
 
     public class KafkaSubscriber : ISubscriber
     {
@@ -117,6 +118,18 @@ namespace UACloudTwin
                         Environment.GetEnvironmentVariable("TOPIC"),
                         Environment.GetEnvironmentVariable("METADATA_TOPIC")
                     });
+
+                    // read all metadata messages stored in the broker (i.e. set the offset to te beginning)
+                    List<TopicPartitionOffset> offsets = _consumer.Committed(TimeSpan.FromSeconds(5));
+                    for (int i = 0; i < _consumer.Assignment.Count; i++)
+                    {
+                        if (_consumer.Assignment[i].Topic == Environment.GetEnvironmentVariable("METADATA_TOPIC"))
+                        {
+                            offsets[i] = new TopicPartitionOffset(_consumer.Assignment[i], new Offset(0));
+                            break;
+                        }
+                    }
+                    _consumer.Assign(offsets);
                 }
 
                 _logger.LogInformation("Connected to Kafka broker.");
