@@ -33,6 +33,8 @@ namespace UACloudTwin
             _logger = logger;
         }
 
+        public bool Ready { get; set; } = false;
+
         public void Login(string instanceUrl)
         {
             _client = new DigitalTwinsClient(new Uri(instanceUrl), new DefaultAzureCredential());
@@ -111,6 +113,7 @@ namespace UACloudTwin
                         _logger.LogInformation("Digital twin models uploaded!");
 
                         _modelsUploaded = true;
+                        Ready = true;
                     }
                 }
                 catch (Exception ex)

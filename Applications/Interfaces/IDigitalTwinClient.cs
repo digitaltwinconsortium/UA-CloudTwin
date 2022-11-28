@@ -2,11 +2,12 @@
 namespace UACloudTwin.Interfaces
 {
     using Opc.Ua;
-    using System.Collections.Generic;
 
     public interface IDigitalTwinClient
     {
         void Login(string instanceUrl);
+
+        bool Ready { get; set; }
 
         void UploadTwinModels();
 

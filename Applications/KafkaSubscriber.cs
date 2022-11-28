@@ -16,11 +16,13 @@ namespace UACloudTwin
 
         private readonly ILogger<KafkaSubscriber> _logger;
         private readonly IMessageProcessor _uaMessageProcessor;
+        private readonly IDigitalTwinClient _digitalTwinClient;
 
-        public KafkaSubscriber(IMessageProcessor uaMessageProcessor, ILogger<KafkaSubscriber> logger)
+        public KafkaSubscriber(IMessageProcessor uaMessageProcessor, ILogger<KafkaSubscriber> logger, IDigitalTwinClient digitalTwinClient)
         {
             _logger = logger;
             _uaMessageProcessor = uaMessageProcessor;
+            _digitalTwinClient = digitalTwinClient;
         }
 
         public void Run()
@@ -41,14 +43,26 @@ namespace UACloudTwin
 
                     _logger.LogInformation("Connected to Kafka broker.");
 
+                    // wait for our digital twin models to be uploaded
+                    while (!_digitalTwinClient.Ready)
+                    {
+                        _logger.LogInformation("Waiting or digital twin models to be uploaded...");
+                        
+                        Thread.Sleep(3000);
+                    }
+
                     // kick off metadata reading thread, if we have a metadata consumer
                     if (_metadataConsumer != null)
                     {
+                        _logger.LogInformation("Reading metadata from broker...");
+                    
                         _ = Task.Run(() => ReadMessageFromBroker(_metadataConsumer));
                     }
 
                     // wait 30 seconds to first read all metadata, then start reading the actual data
                     Thread.Sleep(30 * 1000);
+
+                    _logger.LogInformation("Starting processing of telemetry data...");
 
                     ReadMessageFromBroker(_dataConsumer);
                 }
