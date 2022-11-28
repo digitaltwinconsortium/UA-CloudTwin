@@ -115,7 +115,7 @@ namespace UACloudTwin
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Exception {ex.Message} uploading models!");
+                    _logger.LogError($"Error uploading models: {ex.Message}");
                 }
             }
         }
