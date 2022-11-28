@@ -4,15 +4,15 @@ namespace UACloudTwin
     using Confluent.Kafka;
     using Microsoft.Extensions.Logging;
     using System;
-    using System.Collections.Generic;
     using System.Text;
     using System.Threading;
+    using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
-    using static Confluent.Kafka.ConfigPropertyNames;
 
     public class KafkaSubscriber : ISubscriber
     {
-        private IConsumer<Ignore, byte[]> _consumer = null;
+        private IConsumer<Ignore, byte[]> _dataConsumer = null;
+        private IConsumer<Ignore, byte[]> _metadataConsumer = null;
 
         private readonly ILogger<KafkaSubscriber> _logger;
         private readonly IMessageProcessor _uaMessageProcessor;
@@ -29,34 +29,28 @@ namespace UACloudTwin
             {
                 try
                 {
-                    if ((_consumer == null) || (_consumer.Subscription == null))
+                    if ((_dataConsumer == null) || (_dataConsumer.Subscription == null)
+                    || (_metadataConsumer == null) || (_metadataConsumer.Subscription == null))
                     {
                         // we're not connected yet, try to (re)-connect in 5 seconds
                         Thread.Sleep(5000);
 
                         Connect();
-
                         continue;
                     }
 
-                    ConsumeResult<Ignore, byte[]> result = _consumer.Consume();
+                    _logger.LogInformation("Connected to Kafka broker.");
 
-                    if (result.Message != null)
+                    // kick off metadata reading thread, if we have a metadata consumer
+                    if (_metadataConsumer != null)
                     {
-                        string contentType = "application/json";
-                        if (result.Message.Headers != null && result.Message.Headers.Count > 0)
-                        {
-                            foreach (var header in result.Message.Headers)
-                            {
-                                if (header.Key.Equals("Content-Type"))
-                                {
-                                    contentType = Encoding.UTF8.GetString(header.GetValueBytes());
-                                }
-                            }
-                        }
-
-                        _uaMessageProcessor.ProcessMessage(result.Message.Value, result.Message.Timestamp.UtcDateTime, contentType);
+                        _ = Task.Run(() => ReadMessageFromBroker(_metadataConsumer));
                     }
+
+                    // wait 30 seconds to first read all metadata, then start reading the actual data
+                    Thread.Sleep(30 * 1000);
+
+                    ReadMessageFromBroker(_dataConsumer);
                 }
                 catch (Exception ex)
                 {
@@ -66,16 +60,56 @@ namespace UACloudTwin
             }
         }
 
+        private void ReadMessageFromBroker(IConsumer<Ignore, byte[]> consumer)
+        {
+            while (true)
+            {
+                ConsumeResult<Ignore, byte[]> result = consumer.Consume();
+                if (result.Message != null)
+                {
+                    lock (_uaMessageProcessor)
+                    {
+                        _uaMessageProcessor.ProcessMessage(result.Message.Value, result.Message.Timestamp.UtcDateTime, ReadContentTypeFromHeader(result));
+                    }
+                }
+            }
+        }
+
+        private string ReadContentTypeFromHeader(ConsumeResult<Ignore, byte[]> result)
+        {
+            // read content type from header, if available
+            string contentType = "application/json";
+            if (result.Message.Headers != null && result.Message.Headers.Count > 0)
+            {
+                foreach (var header in result.Message.Headers)
+                {
+                    if (header.Key.Equals("Content-Type"))
+                    {
+                        contentType = Encoding.UTF8.GetString(header.GetValueBytes());
+                    }
+                }
+            }
+
+            return contentType;
+        }
+
         public void Stop()
         {
             try
             {
                 // disconnect if still connected
-                if (_consumer != null)
+                if (_dataConsumer != null)
                 {
-                    _consumer.Close();
-                    _consumer.Dispose();
-                    _consumer = null;
+                    _dataConsumer.Close();
+                    _dataConsumer.Dispose();
+                    _dataConsumer = null;
+                }
+
+                if (_metadataConsumer != null)
+                {
+                    _metadataConsumer.Close();
+                    _metadataConsumer.Dispose();
+                    _metadataConsumer = null;
                 }
             }
             catch (Exception)
@@ -89,14 +123,9 @@ namespace UACloudTwin
             try
             {
                 // disconnect if still connected
-                if (_consumer != null)
-                {
-                    _consumer.Close();
-                    _consumer.Dispose();
-                    _consumer = null;
-                }
+               Stop();
 
-                // create Kafka client
+                // create Kafka data topic client
                 var conf = new ConsumerConfig
                 {
                     GroupId = Environment.GetEnvironmentVariable("CLIENT_NAME"),
@@ -107,32 +136,27 @@ namespace UACloudTwin
                     SaslUsername = Environment.GetEnvironmentVariable("BROKER_USERNAME"),
                     SaslPassword = Environment.GetEnvironmentVariable("BROKER_PASSWORD")
                 };
+                _dataConsumer = new ConsumerBuilder<Ignore, byte[]>(conf).Build();
 
-                _consumer = new ConsumerBuilder<Ignore, byte[]>(conf).Build();
-
-                _consumer.Subscribe(Environment.GetEnvironmentVariable("TOPIC"));
+                _dataConsumer.Subscribe(Environment.GetEnvironmentVariable("TOPIC"));
 
                 if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("METADATA_TOPIC")))
                 {
-                    _consumer.Subscribe(new List<string>() {
-                        Environment.GetEnvironmentVariable("TOPIC"),
-                        Environment.GetEnvironmentVariable("METADATA_TOPIC")
-                    });
-
-                    // read all metadata messages stored in the broker (i.e. set the offset to te beginning)
-                    List<TopicPartitionOffset> offsets = _consumer.Committed(TimeSpan.FromSeconds(5));
-                    for (int i = 0; i < _consumer.Assignment.Count; i++)
+                    // create Kafka meatadata topic client (with a new groupId to make sure we read from the start)
+                    conf = new ConsumerConfig
                     {
-                        if (_consumer.Assignment[i].Topic == Environment.GetEnvironmentVariable("METADATA_TOPIC"))
-                        {
-                            offsets[i] = new TopicPartitionOffset(_consumer.Assignment[i], new Offset(0));
-                            break;
-                        }
-                    }
-                    _consumer.Assign(offsets);
-                }
+                        GroupId = Environment.GetEnvironmentVariable("CLIENT_NAME") + "." + Guid.NewGuid().ToString(),
+                        BootstrapServers = Environment.GetEnvironmentVariable("BROKER_NAME") + ":" + Environment.GetEnvironmentVariable("BROKER_PORT"),
+                        AutoOffsetReset = AutoOffsetReset.Earliest,
+                        SecurityProtocol = SecurityProtocol.SaslSsl,
+                        SaslMechanism = SaslMechanism.Plain,
+                        SaslUsername = Environment.GetEnvironmentVariable("BROKER_USERNAME"),
+                        SaslPassword = Environment.GetEnvironmentVariable("BROKER_PASSWORD")
+                    };
+                    _metadataConsumer = new ConsumerBuilder<Ignore, byte[]>(conf).Build();
 
-                _logger.LogInformation("Connected to Kafka broker.");
+                    _metadataConsumer.Subscribe(Environment.GetEnvironmentVariable("METADATA_TOPIC"));
+                }
             }
             catch (Exception ex)
             {
