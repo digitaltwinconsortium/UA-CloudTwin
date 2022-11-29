@@ -48,10 +48,13 @@ namespace UACloudTwin
             // upload our models on a seperate thread as this takes a while
             while (!_modelsUploaded)
             {
-                Thread.Sleep(5000);
-
                 try
                 {
+                    if ((_client == null) && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADT_HOSTNAME")))
+                    {
+                        Login(Environment.GetEnvironmentVariable("ADT_HOSTNAME"));
+                    }
+
                     // read our ISA95 models
                     List<string> models = new List<string>();
                     List<string> modelIds = new List<string>();
@@ -120,6 +123,8 @@ namespace UACloudTwin
                 {
                     _logger.LogError($"Error uploading models: {ex.Message}");
                 }
+
+                Thread.Sleep(5000);
             }
         }
 
