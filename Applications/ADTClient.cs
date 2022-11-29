@@ -232,12 +232,12 @@ namespace UACloudTwin
 
                         if (parts.Length > 1)
                         {
-                            updateTwinData.AppendReplace("/OPCUADisplayName", parts[1]);
+                            updateTwinData.AppendReplace("/OPCUADisplayName", parts[2]);
                         }
 
                         if (parts.Length > 2)
                         {
-                            updateTwinData.AppendReplace("/OPCUANodeId", parts[2]);
+                            updateTwinData.AppendReplace("/OPCUANodeId", parts[1] + parts[3]);
                         }
 
                         // make sure we add the right value type

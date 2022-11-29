@@ -47,7 +47,7 @@ namespace UACloudTwin
                     while (!_digitalTwinClient.Ready)
                     {
                         _logger.LogInformation("Waiting or digital twin models to be uploaded...");
-                        
+
                         Thread.Sleep(3000);
                     }
 
@@ -55,7 +55,7 @@ namespace UACloudTwin
                     if (_metadataConsumer != null)
                     {
                         _logger.LogInformation("Reading metadata from broker...");
-                    
+
                         _ = Task.Run(() => ReadMessageFromBroker(_metadataConsumer));
                     }
 
