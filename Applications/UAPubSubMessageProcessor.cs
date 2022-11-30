@@ -91,14 +91,6 @@ namespace UACloudTwin
             _messagesProcessed = 0;
         }
 
-        public void Clear()
-        {
-            lock (_hubClient.TableEntries)
-            {
-                _hubClient.TableEntries.Clear();
-            }
-        }
-
         public void ProcessMessage(byte[] payload, DateTime receivedTime, string contentType)
         {
             _currentTimestamp = receivedTime;
