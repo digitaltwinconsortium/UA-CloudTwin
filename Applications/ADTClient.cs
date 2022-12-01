@@ -66,7 +66,7 @@ namespace UACloudTwin
             // read our own ISA95 models
             RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models, modelIds);
 
-            // upload our models on a seperate thread as this takes a while
+            // upload the models
             while (!_modelsUploaded)
             {
                 try
