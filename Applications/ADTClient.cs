@@ -254,12 +254,12 @@ namespace UACloudTwin
                     {
                         string[] parts = telemetryName.Split(';');
 
-                        if (parts.Length > 1)
+                        if (parts.Length > 2)
                         {
                             updateTwinData.AppendReplace("/OPCUADisplayName", parts[2]);
                         }
 
-                        if (parts.Length > 2)
+                        if (parts.Length > 3)
                         {
                             updateTwinData.AppendReplace("/OPCUANodeId", parts[1] + parts[3]);
                         }
