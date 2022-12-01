@@ -33,6 +33,18 @@
       "schema": "string",
       "comment": "OPC UA Endpoint URL on the shop floor to connect to",
       "writable": true
+    },
+    {
+      "@type": "Relationship",
+      "name": "Previous",
+      "target": "dtmi:digitaltwins:opcua:nodeset;1",
+      "comment": "Link to the previous machine in the production line"
+    },
+    {
+      "@type": "Relationship",
+      "name": "Next",
+      "target": "dtmi:digitaltwins:opcua:nodeset;1",
+      "comment": "Link to the next machine in the production line"
     }
   ]
 }

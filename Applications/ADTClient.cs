@@ -12,6 +12,8 @@ namespace UACloudTwin
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Net.Http;
+    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
@@ -45,6 +47,25 @@ namespace UACloudTwin
 
         public void UploadTwinModels()
         {
+            string baseModelsDirectory = "ISA95BaseModels";
+            List<string> models = new List<string>();
+            List<string> modelIds = new List<string>();
+
+            // read the ISA95 models from the DTC's manufacturing ontologies repo
+            HttpClient webClient = new HttpClient();
+            HttpResponseMessage responseMessage = webClient.Send(new HttpRequestMessage(HttpMethod.Get, "https://github.com/digitaltwinconsortium/ManufacturingOntologies/archive/refs/heads/main.zip"));
+            File.WriteAllBytes(Path.Combine(Directory.GetCurrentDirectory(), baseModelsDirectory + ".zip"), responseMessage.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult());
+            webClient.Dispose();
+
+            // unzip and read the models
+            System.IO.Compression.ZipFile.ExtractToDirectory(baseModelsDirectory + ".zip", baseModelsDirectory, true);
+            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "CommonObjectModels"), models, modelIds);
+            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "EquipmentHierarchy"), models, modelIds);
+            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "Extensions"), models, modelIds);
+
+            // read our own ISA95 models
+            RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models, modelIds);
+
             // upload our models on a seperate thread as this takes a while
             while (!_modelsUploaded)
             {
@@ -53,23 +74,6 @@ namespace UACloudTwin
                     if ((_client == null) && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ADT_HOSTNAME")))
                     {
                         Login(Environment.GetEnvironmentVariable("ADT_HOSTNAME"));
-                    }
-
-                    // read our ISA95 models
-                    List<string> models = new List<string>();
-                    List<string> modelIds = new List<string>();
-
-                    IEnumerable<string> files = Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), "*.json");
-                    foreach (string dtdlFilePath in files)
-                    {
-                        // extract model definition
-                        string modelDefinition = System.IO.File.ReadAllText(dtdlFilePath);
-                        models.Add(modelDefinition);
-
-                        // extract model ID
-                        JObject elements = JsonConvert.DeserializeObject<JObject>(modelDefinition);
-                        string modelId = elements.First.Next.First.ToString();
-                        modelIds.Add(modelId);
                     }
 
                     // delete existing models if they already exist
@@ -125,6 +129,21 @@ namespace UACloudTwin
                 }
 
                 Thread.Sleep(5000);
+            }
+        }
+
+        private void RetrieveModelsFromDirectory(string baseModelsDirectory, List<string> models, List<string> modelIds)
+        {
+            foreach (string dtdlFilePath in Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), baseModelsDirectory), "*.json"))
+            {
+                // extract model definition
+                string modelDefinition = File.ReadAllText(dtdlFilePath);
+                models.Add(modelDefinition);
+
+                // extract model ID
+                JObject elements = JsonConvert.DeserializeObject<JObject>(modelDefinition);
+                string modelId = elements.First.Next.First.ToString();
+                modelIds.Add(modelId);
             }
         }
 

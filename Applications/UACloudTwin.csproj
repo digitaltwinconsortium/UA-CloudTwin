@@ -8,6 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ISA95BaseModels\**" />
+    <Content Remove="ISA95BaseModels\**" />
+    <EmbeddedResource Remove="ISA95BaseModels\**" />
+    <None Remove="ISA95BaseModels\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="ISA95BaseModels.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.DigitalTwins.Core" Version="1.4.0" />
     <PackageReference Include="Azure.Identity" Version="1.8.0" />
     <PackageReference Include="Confluent.Kafka" Version="1.9.3" />
