@@ -12,8 +12,8 @@ namespace UACloudTwin
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.IO.Compression;
     using System.Net.Http;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using UACloudTwin.Interfaces;
@@ -58,7 +58,7 @@ namespace UACloudTwin
             webClient.Dispose();
 
             // unzip and read the models
-            System.IO.Compression.ZipFile.ExtractToDirectory(baseModelsDirectory + ".zip", baseModelsDirectory, true);
+            ZipFile.ExtractToDirectory(baseModelsDirectory + ".zip", baseModelsDirectory, true);
             RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "CommonObjectModels"), models, modelIds);
             RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "EquipmentHierarchy"), models, modelIds);
             RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "Extensions"), models, modelIds);
