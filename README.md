@@ -58,7 +58,7 @@ Then point your web browser to <http://yourIPAddress>
 
 You can optionally supply the following query parameters in the Url:
 
-* `?endpoint=your-broker-connection-string` - the connection strng of the broker to use
+* `?endpoint=your-broker-connection-string` - the connection string of the broker to use
 * `?instanceurl=your-adt-instance-url` - the URL of the Azure Digital Twins instance to use
 
 e.g. <https://localhost:5001/Setup?endpoint=[your-connection-string]&instanceUrl=[your-adt-instance-url]>
