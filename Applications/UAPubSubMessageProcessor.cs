@@ -302,7 +302,7 @@ namespace UACloudTwin
                     {
                         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
                         {
-                            // if we didn't reveice a valid asset name, we use the publisher ID instead, if configured by the user
+                            // if we didn't receive a valid asset name, we use the publisher ID instead, if configured by the user
                             assetName = publisherID;
                         }
                         else
