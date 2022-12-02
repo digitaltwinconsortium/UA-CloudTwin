@@ -8,6 +8,7 @@ UA Cloud Twin uses username and password authentication by default, but other au
 ## How UA Cloud Twin maps OPC UA Metadata to Digital Twins
 
 UA Cloud Twin creates digital twins for industrial assets by looking at the OPC UA PubSub Metadata messages' Name property in the format `OPCUAApplicationURI;OPCUANamespaceURI`. Please set your Name property within a metadata message appropriately for best results.
+
 UA Cloud Twin also creates digital twins one level below the industrial assets digital twins based on the field names in the OPC UA PubSub DataSet messages and constructs the name in the format `OPCUAApplicationURI;OPCUANamespaceURI;FieldName;NodeID`.
 
 If no OPC UA PubSub Metadata messages were received and the IGNORE_MISSING_METADATA environment variable is defined, UA Cloud Twin creates digital twins for assets in the format `OPCUAPubSubPublisherID` and `OPCUAPubSubPublisherID;DatasetWriterID;DatasetFieldIndex` one level below.
