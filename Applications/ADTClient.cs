@@ -252,6 +252,8 @@ namespace UACloudTwin
                     var updateTwinData = new JsonPatchDocument();
                     try
                     {
+                        updateTwinData.AppendReplace("/equipmentID", telemetryName);
+
                         string[] parts = telemetryName.Split(';');
 
                         if (parts.Length > 2)
