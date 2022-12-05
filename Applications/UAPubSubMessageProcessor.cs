@@ -292,11 +292,13 @@ namespace UACloudTwin
                 {
                     string dataSetWriterId = datasetmessage.DataSetWriterId.ToString();
                     string assetName = string.Empty;
+                    string nodeId = string.Empty;
 
                     if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId))
                     {
                         string name = _dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Name;
                         assetName = name.Substring(0, name.LastIndexOf(';'));
+                        nodeId = name.Substring(name.LastIndexOf(";") + 1);
                     }
                     else
                     {
@@ -335,7 +337,7 @@ namespace UACloudTwin
                                 }
                                 else
                                 {
-                                    telemetryName = assetName + ";" + field.FieldMetaData.Name + ";" + field.FieldMetaData.BinaryEncodingId.ToString();
+                                    telemetryName = assetName + ";" + field.FieldMetaData.Name + ";" + nodeId;
 
                                     // read the OPC UA type from the parsed metadata message in the dataset reader
                                     if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId)
