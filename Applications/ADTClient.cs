@@ -59,9 +59,7 @@ namespace UACloudTwin
 
             // unzip and read the models
             ZipFile.ExtractToDirectory(baseModelsDirectory + ".zip", baseModelsDirectory, true);
-            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "CommonObjectModels"), models, modelIds);
-            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "EquipmentHierarchy"), models, modelIds);
-            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95", "Extensions"), models, modelIds);
+            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95"), models, modelIds);
 
             // read our own ISA95 models
             RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models, modelIds);
@@ -134,7 +132,12 @@ namespace UACloudTwin
 
         private void RetrieveModelsFromDirectory(string baseModelsDirectory, List<string> models, List<string> modelIds)
         {
-            foreach (string dtdlFilePath in Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), baseModelsDirectory), "*.json"))
+            EnumerationOptions options = new()
+            {
+                RecurseSubdirectories = true
+            };
+
+            foreach (string dtdlFilePath in Directory.EnumerateFiles(Path.Combine(Directory.GetCurrentDirectory(), baseModelsDirectory), "*.json", options))
             {
                 // extract model definition
                 string modelDefinition = File.ReadAllText(dtdlFilePath);
