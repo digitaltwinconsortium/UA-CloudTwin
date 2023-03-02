@@ -2,7 +2,7 @@
  * Copyright (c) 2005-2021 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -11,7 +11,7 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -50,7 +50,7 @@ namespace Opc.Ua.PubSub.Encoding
         /// Create new instance of <see cref="JsonDataSetMessage"/> with DataSet parameter
         /// </summary>
         /// <param name="dataSet"></param>
-        public JsonDataSetMessage(DataSet dataSet = null) 
+        public JsonDataSetMessage(DataSet dataSet = null)
         {
             DataSet = dataSet;
         }
@@ -165,7 +165,7 @@ namespace Opc.Ua.PubSub.Encoding
                         // redo jsonDecoder stack
                         jsonDecoder.Pop();
 
-                        if (DataSet != null)
+                        if ((dataSetReader.Name != "default_json:0") && (DataSet != null))
                         {
                             // the dataset was decoded
                             return;
@@ -174,8 +174,6 @@ namespace Opc.Ua.PubSub.Encoding
                 }
             }
         }
-
-
 
         /// <summary>
         /// Atempt to decode dataset from the KeyValue pairs
@@ -195,7 +193,7 @@ namespace Opc.Ua.PubSub.Encoding
 
             object token = null;
             string payloadStructureName = kFieldPayload;
-            // try to read "Payload" structure 
+            // try to read "Payload" structure
             if (!jsonDecoder.ReadField(kFieldPayload, out token))
             {
                 // Decode the Messages element in case there is no "Payload" structure
@@ -205,18 +203,18 @@ namespace Opc.Ua.PubSub.Encoding
 
             Dictionary<string, object> payload = token as Dictionary<string, object>;
 
-            if ((payload != null) && (dataSetReader.DataSetMetaData != null) && (dataSetReader.DataSetMetaData.Fields.Count > 0))
+            if ((payload != null) && !string.IsNullOrEmpty(dataSetReader.Name) && (dataSetReader.Name != "default_json:0") && (dataSetReader.DataSetMetaData != null) && (dataSetReader.DataSetMetaData.Fields.Count > 0))
             {
                 DecodeErrorReason = ValidateMetadataVersion(dataSetReader.DataSetMetaData.ConfigurationVersion);
 
-                if ( (payload.Count > dataSetReader.DataSetMetaData.Fields.Count) ||
+                if ((payload.Count > dataSetReader.DataSetMetaData.Fields.Count) ||
                      IsMetadataMajorVersionChange)
                 {
                     // filter out payload that has more fields than the searched datasetMetadata or
                     // doesn't pass metadata version
                     return;
                 }
-                // check also the field names from reader, if any extra field names then the payload is not matching 
+                // check also the field names from reader, if any extra field names then the payload is not matching
                 foreach (string key in payload.Keys)
                 {
                     var field = dataSetReader.DataSetMetaData.Fields.FirstOrDefault(f => f.Name == key);
@@ -233,7 +231,19 @@ namespace Opc.Ua.PubSub.Encoding
                 bool wasPush = jsonDecoder.PushStructure(payloadStructureName);
                 if (wasPush)
                 {
-                    DataSet = DecodePayloadContent(jsonDecoder, dataSetReader);
+                    if (DataSet == null)
+                    {
+                        DataSet = DecodePayloadContent(jsonDecoder, dataSetReader);
+                    }
+                    else
+                    {
+                        // combine with existing fields
+                        List<Field> fields = new List<Field>();
+                        fields.AddRange(DataSet.Fields);
+                        fields.AddRange(DecodePayloadContent(jsonDecoder, dataSetReader).Fields);
+
+                        DataSet.Fields = fields.ToArray();
+                    }
                 }
             }
             finally
@@ -395,7 +405,6 @@ namespace Opc.Ua.PubSub.Encoding
             return result;
         }
 
-
         /// <summary>
         /// Decode the Content of the Payload and create a DataSet object from it
         /// </summary>
@@ -405,7 +414,7 @@ namespace Opc.Ua.PubSub.Encoding
             List<Field> dataFields = new List<Field>();
 
             List<DataValue> dataValues = new List<DataValue>();
-            if (dataSetMetaData?.Fields.Count > 0)
+            if (!string.IsNullOrEmpty(dataSetMetaData.Name) && dataSetMetaData?.Fields.Count > 0)
             {
                 for (int index = 0; index < dataSetMetaData?.Fields.Count; index++)
                 {
@@ -451,7 +460,7 @@ namespace Opc.Ua.PubSub.Encoding
                     {
                         FieldMetaData metaData = new FieldMetaData();
                         metaData.Name = field.Key;
-                        
+
                         // check for array
                         if (field.Value is List<object>)
                         {
@@ -467,7 +476,7 @@ namespace Opc.Ua.PubSub.Encoding
                                     dataSetMetaData?.Fields.Add(metaData);
                                     dataValues.Add(new DataValue(new Variant(subfield)));
                                 }
-                                
+
                             }
                         }
                         else if (field.Value is Dictionary<string, object>)
@@ -484,11 +493,11 @@ namespace Opc.Ua.PubSub.Encoding
                 }
             }
 
-            // build the DataSet Fields collection based on the decoded values and the target 
+            // build the DataSet Fields collection based on the decoded values and the target
             for (int i = 0; i < dataValues.Count; i++)
             {
                 Field dataField = new Field();
-                dataField.FieldMetaData = dataSetMetaData?.Fields[i];
+                dataField.FieldMetaData = dataSetMetaData?.Fields[(int)dataSetMetaData?.Fields.Count - dataValues.Count + i];
                 dataField.Value = dataValues[i];
 
                 dataFields.Add(dataField);
@@ -688,22 +697,22 @@ namespace Opc.Ua.PubSub.Encoding
             {
                 DataSetWriterId = jsonDecoder.ReadUInt16(nameof(DataSetWriterId));
             }
-            
+
             if (jsonDecoder.ReadField(nameof(SequenceNumber), out token))
             {
                 SequenceNumber = jsonDecoder.ReadUInt32(nameof(SequenceNumber));
             }
-            
+
             if (jsonDecoder.ReadField(nameof(MetaDataVersion), out token))
             {
                 MetaDataVersion = jsonDecoder.ReadEncodeable(nameof(MetaDataVersion), typeof(ConfigurationVersionDataType)) as ConfigurationVersionDataType;
             }
-            
+
             if (jsonDecoder.ReadField(nameof(Timestamp), out token))
             {
                 Timestamp = jsonDecoder.ReadDateTime(nameof(Timestamp));
             }
-            
+
             if (jsonDecoder.ReadField(nameof(Status), out token))
             {
                 Status = jsonDecoder.ReadStatusCode(nameof(Status));

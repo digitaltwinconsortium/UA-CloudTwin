@@ -32,11 +32,14 @@ namespace UACloudTwin
             _hubClient = new StatusHubClient(hubContext);
             _logger = logger;
             _twinClient = twinClient;
-
-            // add default dataset readers
             _dataSetReaders = new Dictionary<string, DataSetReaderDataType>();
-            AddUadpDataSetReader("default_uadp", 0, new DataSetMetaDataType(), DateTime.UtcNow);
-            AddJsonDataSetReader("default_json", 0, new DataSetMetaDataType(), DateTime.UtcNow);
+
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
+            {
+                // add default dataset readers
+                AddUadpDataSetReader("default_uadp", 0, new DataSetMetaDataType(), DateTime.UtcNow);
+                AddJsonDataSetReader("default_json", 0, new DataSetMetaDataType(), DateTime.UtcNow);
+            }
 
             _throughputTimer = new Timer(MessagesProcessedCalculation, null, 10000, 10000);
 
@@ -274,9 +277,12 @@ namespace UACloudTwin
             {
                 encodedMessage.Decode(ServiceMessageContext.GlobalContext, payload, _dataSetReaders.Values.ToArray());
 
-                // reset metadata fields on default dataset readers
-                _dataSetReaders["default_uadp:0"].DataSetMetaData.Fields.Clear();
-                _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
+                {
+                    // reset metadata fields on default dataset readers
+                    _dataSetReaders["default_uadp:0"].DataSetMetaData.Fields.Clear();
+                    _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
+                }
 
                 string publisherID = string.Empty;
                 if (encodedMessage is JsonNetworkMessage)

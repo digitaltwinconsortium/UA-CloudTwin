@@ -2,7 +2,7 @@
  * Copyright (c) 2005-2021 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -11,7 +11,7 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -259,7 +259,7 @@ namespace Opc.Ua.PubSub.Encoding
         /// <param name="dataSetReaders"></param>
         public override void Decode(IServiceMessageContext context, byte[] message, IList<DataSetReaderDataType> dataSetReaders)
         {
-            string json = System.Text.Encoding.UTF8.GetString(message);  
+            string json = System.Text.Encoding.UTF8.GetString(message);
 
             using (JsonDecoder jsonDecoder = new JsonDecoder(json, context))
             {
@@ -278,7 +278,6 @@ namespace Opc.Ua.PubSub.Encoding
             }
         }
 
-        
         #endregion
 
         #region Private Methods - Encoding
@@ -334,7 +333,7 @@ namespace Opc.Ua.PubSub.Encoding
                 jsonEncoder.WriteUInt16(nameof(DataSetWriterId), DataSetWriterId);
             }
         }
-        
+
         /// <summary>
         /// Encode DataSetMessages
         /// </summary>
@@ -380,7 +379,7 @@ namespace Opc.Ua.PubSub.Encoding
 
         #endregion
 
-        #region Private Methods - Decoding 
+        #region Private Methods - Decoding
 
         /// <summary>
         /// Encode Network Message Header
@@ -433,7 +432,7 @@ namespace Opc.Ua.PubSub.Encoding
                 NetworkMessageContentMask |= JsonNetworkMessageContentMask.DataSetClassId;
             }
 
-            if (m_jsonNetworkMessageType == JSONNetworkMessageType.DataSetMetaData) 
+            if (m_jsonNetworkMessageType == JSONNetworkMessageType.DataSetMetaData)
             {
                 // for metadata messages the DataSetWriterId field is mandatory
                 if (jsonDecoder.ReadField(nameof(DataSetWriterId), out token))
@@ -531,7 +530,7 @@ namespace Opc.Ua.PubSub.Encoding
                     messagesList = messagesToken as List<object>;
                     if (messagesList == null)
                     {
-                        // this is a SingleDataSetMessage encoded as the content of Messages 
+                        // this is a SingleDataSetMessage encoded as the content of Messages
                         jsonDecoder.PushStructure(kFieldMessages);
                         messagesList = new List<object>();
                     }
@@ -547,7 +546,7 @@ namespace Opc.Ua.PubSub.Encoding
                 }
                 else
                 {
-                    // this is a SingleDataSetMessage encoded as the content json 
+                    // this is a SingleDataSetMessage encoded as the content json
                     messagesList = new List<object>();
                 }
 
@@ -560,14 +559,14 @@ namespace Opc.Ua.PubSub.Encoding
                            as JsonDataSetReaderMessageDataType;
                         if (jsonMessageSettings == null)
                         {
-                            // The reader MessageSettings is not set up correctly 
+                            // The reader MessageSettings is not set up correctly
                             continue;
                         }
 
                         JsonNetworkMessageContentMask networkMessageContentMask = (JsonNetworkMessageContentMask)jsonMessageSettings.NetworkMessageContentMask;
                         if ((networkMessageContentMask & NetworkMessageContentMask) != NetworkMessageContentMask)
                         {
-                            // The reader MessageSettings.NetworkMessageContentMask is not set up correctly 
+                            // The reader MessageSettings.NetworkMessageContentMask is not set up correctly
                             continue;
                         }
 
