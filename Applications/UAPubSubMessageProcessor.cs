@@ -23,7 +23,7 @@ namespace UACloudTwin
 
         private Dictionary<string, DataSetReaderDataType> _dataSetReaders;
         private Timer _throughputTimer;
-        private int _messagesProcessed = 0;
+        private float _messagesProcessed = 0;
         private DateTime _currentTimestamp = DateTime.MinValue;
         private string _chartCategory = "OPC UA PubSub Messages Per Second Processed";
 
