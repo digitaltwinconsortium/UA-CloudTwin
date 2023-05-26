@@ -275,109 +275,112 @@ namespace UACloudTwin
             }
             else
             {
-                encodedMessage.Decode(ServiceMessageContext.GlobalContext, payload, _dataSetReaders.Values.ToArray());
-
-                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESS_TELEMETRY_MESSAGES")))
                 {
-                    // reset metadata fields on default dataset readers
-                    _dataSetReaders["default_uadp:0"].DataSetMetaData.Fields.Clear();
-                    _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
-                }
+                    encodedMessage.Decode(ServiceMessageContext.GlobalContext, payload, _dataSetReaders.Values.ToArray());
 
-                string publisherID = string.Empty;
-                if (encodedMessage is JsonNetworkMessage)
-                {
-                    publisherID = ((JsonNetworkMessage)encodedMessage).PublisherId?.ToString();
-                }
-                else
-                {
-                    publisherID = ((UadpNetworkMessage)encodedMessage).PublisherId?.ToString();
-                }
-
-                foreach (UaDataSetMessage datasetmessage in encodedMessage.DataSetMessages)
-                {
-                    string dataSetWriterId = datasetmessage.DataSetWriterId.ToString();
-                    string assetName = string.Empty;
-                    string nodeId = string.Empty;
-
-                    if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId))
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
                     {
-                        string name = _dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Name;
-                        assetName = name.Substring(0, name.LastIndexOf(';'));
-                        nodeId = name.Substring(name.LastIndexOf(";") + 1);
+                        // reset metadata fields on default dataset readers
+                        _dataSetReaders["default_uadp:0"].DataSetMetaData.Fields.Clear();
+                        _dataSetReaders["default_json:0"].DataSetMetaData.Fields.Clear();
+                    }
+
+                    string publisherID = string.Empty;
+                    if (encodedMessage is JsonNetworkMessage)
+                    {
+                        publisherID = ((JsonNetworkMessage)encodedMessage).PublisherId?.ToString();
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
+                        publisherID = ((UadpNetworkMessage)encodedMessage).PublisherId?.ToString();
+                    }
+
+                    foreach (UaDataSetMessage datasetmessage in encodedMessage.DataSetMessages)
+                    {
+                        string dataSetWriterId = datasetmessage.DataSetWriterId.ToString();
+                        string assetName = string.Empty;
+                        string nodeId = string.Empty;
+
+                        if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId))
                         {
-                            // if we didn't receive a valid asset name, we use the publisher ID instead, if configured by the user
-                            assetName = publisherID;
+                            string name = _dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Name;
+                            assetName = name.Substring(0, name.LastIndexOf(';'));
+                            nodeId = name.Substring(name.LastIndexOf(";") + 1);
                         }
                         else
                         {
-                            _logger.LogInformation($"No metadata message for {publisherID}:{dataSetWriterId} received yet!");
-                            continue;
-                        }
-                    }
-
-                    if (datasetmessage.DataSet != null)
-                    {
-                        for (int i = 0; i < datasetmessage.DataSet.Fields.Length; i++)
-                        {
-                            Field field = datasetmessage.DataSet.Fields[i];
-                            if (field.Value != null)
+                            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGNORE_MISSING_METADATA")))
                             {
-                                // if the timestamp in the field is missing, use the timestamp from the dataset message instead
-                                if (field.Value.SourceTimestamp == DateTime.MinValue)
-                                {
-                                    field.Value.SourceTimestamp = datasetmessage.Timestamp;
-                                }
+                                // if we didn't receive a valid asset name, we use the publisher ID instead, if configured by the user
+                                assetName = publisherID;
+                            }
+                            else
+                            {
+                                _logger.LogInformation($"No metadata message for {publisherID}:{dataSetWriterId} received yet!");
+                                continue;
+                            }
+                        }
 
-                                // if we didn't receive valid metadata, we use the dataset writer ID and index into the dataset instead
-                                string telemetryName = string.Empty;
-                                BuiltInType type = BuiltInType.Variant;
-
-                                if (field.FieldMetaData == null || string.IsNullOrEmpty(field.FieldMetaData.Name))
+                        if (datasetmessage.DataSet != null)
+                        {
+                            for (int i = 0; i < datasetmessage.DataSet.Fields.Length; i++)
+                            {
+                                Field field = datasetmessage.DataSet.Fields[i];
+                                if (field.Value != null)
                                 {
-                                    telemetryName = assetName + ";" + datasetmessage.DataSetWriterId.ToString() + ";" + i.ToString();
-                                }
-                                else
-                                {
-                                    telemetryName = assetName + ";" + field.FieldMetaData.Name + ";" + nodeId;
-
-                                    // read the OPC UA type from the parsed metadata message in the dataset reader
-                                    if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId)
-                                    && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields != null)
-                                    && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields.Count > i)
-                                    && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields[i].BuiltInType != 0))
+                                    // if the timestamp in the field is missing, use the timestamp from the dataset message instead
+                                    if (field.Value.SourceTimestamp == DateTime.MinValue)
                                     {
-                                        type = (BuiltInType)_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields[i].BuiltInType;
+                                        field.Value.SourceTimestamp = datasetmessage.Timestamp;
+                                    }
+
+                                    // if we didn't receive valid metadata, we use the dataset writer ID and index into the dataset instead
+                                    string telemetryName = string.Empty;
+                                    BuiltInType type = BuiltInType.Variant;
+
+                                    if (field.FieldMetaData == null || string.IsNullOrEmpty(field.FieldMetaData.Name))
+                                    {
+                                        telemetryName = assetName + ";" + datasetmessage.DataSetWriterId.ToString() + ";" + i.ToString();
                                     }
                                     else
                                     {
-                                        // default to variant
-                                        type = BuiltInType.Variant;
-                                    }
-                                }
+                                        telemetryName = assetName + ";" + field.FieldMetaData.Name + ";" + nodeId;
 
-                                try
-                                {
-                                    // check for variant array
-                                    if (field.Value.Value is Variant[])
-                                    {
-                                        // convert to string
-                                        DataValue value = new DataValue(new Variant(field.Value.ToString()), field.Value.StatusCode, field.Value.SourceTimestamp);
+                                        // read the OPC UA type from the parsed metadata message in the dataset reader
+                                        if (_dataSetReaders.ContainsKey(publisherID + ":" + dataSetWriterId)
+                                        && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields != null)
+                                        && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields.Count > i)
+                                        && (_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields[i].BuiltInType != 0))
+                                        {
+                                            type = (BuiltInType)_dataSetReaders[publisherID + ":" + dataSetWriterId].DataSetMetaData.Fields[i].BuiltInType;
+                                        }
+                                        else
+                                        {
+                                            // default to variant
+                                            type = BuiltInType.Variant;
+                                        }
+                                    }
 
-                                        _twinClient.UpdateAssetTelemetry(assetName, telemetryName, BuiltInType.String, value);
-                                    }
-                                    else
+                                    try
                                     {
-                                        _twinClient.UpdateAssetTelemetry(assetName, telemetryName, type, field.Value);
+                                        // check for variant array
+                                        if (field.Value.Value is Variant[])
+                                        {
+                                            // convert to string
+                                            DataValue value = new DataValue(new Variant(field.Value.ToString()), field.Value.StatusCode, field.Value.SourceTimestamp);
+
+                                            _twinClient.UpdateAssetTelemetry(assetName, telemetryName, BuiltInType.String, value);
+                                        }
+                                        else
+                                        {
+                                            _twinClient.UpdateAssetTelemetry(assetName, telemetryName, type, field.Value);
+                                        }
                                     }
-                                }
-                                catch(Exception ex)
-                                {
-                                    _logger.LogError($"Cannot parse field {field.Value}: {ex.Message}");
+                                    catch (Exception ex)
+                                    {
+                                        _logger.LogError($"Cannot parse field {field.Value}: {ex.Message}");
+                                    }
                                 }
                             }
                         }

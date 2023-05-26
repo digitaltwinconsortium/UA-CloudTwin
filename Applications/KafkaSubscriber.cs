@@ -59,12 +59,20 @@ namespace UACloudTwin
                         _ = Task.Run(() => ReadMessageFromBroker(_metadataConsumer));
                     }
 
-                    // wait 30 seconds to first read all metadata, then start reading the actual data
-                    Thread.Sleep(30 * 1000);
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESS_TELEMETRY_MESSAGES")))
+                    {
+                        // wait 30 seconds to first read all metadata, then start reading the actual data
+                        Thread.Sleep(30 * 1000);
 
-                    _logger.LogInformation("Starting processing of telemetry data...");
+                        _logger.LogInformation("Starting processing of telemetry data...");
 
-                    ReadMessageFromBroker(_dataConsumer);
+                        ReadMessageFromBroker(_dataConsumer);
+                    }
+                    else
+                    {
+                        // nothing to do
+                        Thread.Sleep(Timeout.Infinite);
+                    }
                 }
                 catch (Exception ex)
                 {
