@@ -46,7 +46,7 @@ namespace UACloudTwin
                     // wait for our digital twin models to be uploaded
                     while (!_digitalTwinClient.Ready)
                     {
-                        _logger.LogInformation("Waiting or digital twin models to be uploaded...");
+                        _logger.LogInformation("Waiting for digital twin models to be uploaded...");
 
                         Thread.Sleep(3000);
                     }
