@@ -24,8 +24,6 @@ namespace UACloudTwin
 
         private DigitalTwinsClient _client;
 
-        private bool _modelsUploaded = false;
-
         private object _containsLock = new object();
 
         private object _createLock = new object();
@@ -62,10 +60,17 @@ namespace UACloudTwin
             RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95"), models, modelIds);
 
             // read our own ISA95 models
-            RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models, modelIds);
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+            {
+                RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95Equipment"), models, modelIds);
+            }
+            else
+            {
+                RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models, modelIds);
+            }
 
             // upload the models
-            while (!_modelsUploaded)
+            while (!Ready)
             {
                 try
                 {
@@ -116,8 +121,6 @@ namespace UACloudTwin
                     if (response != null)
                     {
                         _logger.LogInformation("Digital twin models uploaded!");
-
-                        _modelsUploaded = true;
                         Ready = true;
                     }
                 }
@@ -162,18 +165,44 @@ namespace UACloudTwin
                 // create area twin for publisher
                 BasicDigitalTwin publisherTwin = new()
                 {
-                    Id = publisherName.GetDeterministicHashCode().ToString(),
-                    Metadata =
+                    Id = publisherName.GetDeterministicHashCode().ToString()
+                };
+
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                {
+                    publisherTwin.Metadata = new()
+                    {
+                        ModelId = "dtmi:digitaltwins:isa95:Equipment;1"
+                    };
+                }
+                else
+                {
+                    publisherTwin.Metadata = new()
                     {
                         ModelId = "dtmi:digitaltwins:isa95:Area;1"
-                    },
-                    Contents =
+                    };
+                }
+
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                {
+                    publisherTwin.Contents = new Dictionary<string, object>()
+                    {
+                        { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                        { "equipmentLevel", "area" },
+                        { "description", new Dictionary<string, object> {{ "$metadata", new { } } } },
+                        { "spatialDefinition", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                        { "ID", publisherName }
+                    };
+                }
+                else
+                {
+                    publisherTwin.Contents = new Dictionary<string, object>()
                     {
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
                         { "equipmentLevel", "Area" },
-                        { "equipmentID", publisherName },
-                    }
-                };
+                        { "equipmentID", publisherName }
+                    };
+                }
 
                 CreateTwinIfRequired(publisherTwin, publisherName.GetDeterministicHashCode(), 0);
 
@@ -184,16 +213,33 @@ namespace UACloudTwin
                     Metadata =
                     {
                         ModelId = "dtmi:digitaltwins:opcua:nodeset;1"
-                    },
-                    Contents =
+                    }
+                };
+
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                {
+                    assetTwin.Contents = new Dictionary<string, object>()
+                    {
+                        { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                        { "OPCUAApplicationURI", uaApplicationURI },
+                        { "OPCUANamespaceURI", uaNamespaceURI },
+                        { "equipmentLevel", "workCenter" },
+                        { "description", new Dictionary<string, object> {{ "$metadata", new { } } } },
+                        { "spatialDefinition", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                        { "ID", assetName }
+                    };
+                }
+                else
+                {
+                    assetTwin.Contents = new Dictionary<string, object>()
                     {
                         { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
                         { "OPCUAApplicationURI", uaApplicationURI },
                         { "OPCUANamespaceURI", uaNamespaceURI },
                         { "equipmentLevel", "Work Center" },
                         { "equipmentID", assetName },
-                    }
-                };
+                    };
+                }
 
                 CreateTwinIfRequired(assetTwin, assetName.GetDeterministicHashCode(), publisherName.GetDeterministicHashCode());
             });
@@ -210,16 +256,31 @@ namespace UACloudTwin
             {
                 BasicDigitalTwin twin = new()
                 {
-                    Id = telemetryName.GetDeterministicHashCode().ToString(),
-                    Contents =
+                    Id = telemetryName.GetDeterministicHashCode().ToString()
+                };
+
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                {
+                    twin.Contents = new Dictionary<string, object>()
                     {
-                        { "tags", new Dictionary<string, object> {{ "$metadata", new {} }} },
+                        { "tags", new Dictionary<string, object> { { "$metadata", new { } } } },
+                        { "OPCUADisplayName", string.Empty },
+                        { "OPCUANodeId", string.Empty },
+                        { "description", new Dictionary<string, object> {{ "$metadata", new { } } } },
+                        { "ID", telemetryName }
+                    };
+                }
+                else
+                {
+                    twin.Contents = new Dictionary<string, object>()
+                    {
+                        { "tags", new Dictionary<string, object> { { "$metadata", new { } } } },
                         { "equipmentLevel", "Work Unit" },
                         { "equipmentID", telemetryName },
                         { "OPCUADisplayName", string.Empty },
                         { "OPCUANodeId", string.Empty }
-                    }
-                };
+                    };
+                }
 
                 // map from OPC UA built-in types to DTDL primitive types
                 // see https://reference.opcfoundation.org/v104/Core/docs/Part6/5.1.2/
@@ -255,7 +316,14 @@ namespace UACloudTwin
                     var updateTwinData = new JsonPatchDocument();
                     try
                     {
-                        updateTwinData.AppendReplace("/equipmentID", telemetryName);
+                        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                        {
+                            updateTwinData.AppendReplace("/ID", telemetryName);
+                        }
+                        else
+                        {
+                            updateTwinData.AppendReplace("/equipmentID", telemetryName);
+                        }
 
                         string[] parts = telemetryName.Split(';');
 
@@ -309,7 +377,10 @@ namespace UACloudTwin
                             updateTwinData.AppendReplace("/OPCUANodeValue", double.Parse(telemetryValue.Value.ToString()));
                         }
 
-                        updateTwinData.AppendReplace("/$metadata/OPCUANodeValue/sourceTime", telemetryValue.SourceTimestamp.ToString("o"));
+                        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                        {
+                            updateTwinData.AppendReplace("/$metadata/OPCUANodeValue/sourceTime", telemetryValue.SourceTimestamp.ToString("o"));
+                        }
 
                         _client.UpdateDigitalTwinAsync(telemetryName.GetDeterministicHashCode().ToString(), updateTwinData).GetAwaiter().GetResult();
                     }
@@ -323,7 +394,7 @@ namespace UACloudTwin
 
         private void CreateContainsRelationshipIfRequired(uint childId, uint parentId)
         {
-            if (_modelsUploaded && TwinExists(parentId))
+            if (Ready && TwinExists(parentId))
             {
                 // serialize access to contains relationship check and creation to avoid duplicates due to race conditions
                 lock (_containsLock)
@@ -372,6 +443,108 @@ namespace UACloudTwin
             }
         }
 
+        private void CreateIsMadeUpofRelationshipIfRequired(uint childId, uint parentId)
+        {
+            if (Ready && TwinExists(parentId))
+            {
+                // serialize access to isMadeUpOf relationship check and creation to avoid duplicates due to race conditions
+                lock (_containsLock)
+                {
+                    try
+                    {
+                        bool relationshipExists = false;
+
+                        Pageable<BasicRelationship> existingRelationships = _client.GetRelationships<BasicRelationship>(parentId.ToString());
+
+                        foreach (BasicRelationship existingRelationship in existingRelationships)
+                        {
+                            if ((existingRelationship.TargetId == childId.ToString()) && (existingRelationship.Name == "isMadeUpOf"))
+                            {
+                                relationshipExists = true;
+                                break;
+                            }
+                        }
+
+                        if (!relationshipExists)
+                        {
+                            throw new RequestFailedException("Relationship doesn't exist!");
+                        }
+                    }
+                    catch (RequestFailedException)
+                    {
+                        string id = Guid.NewGuid().ToString();
+                        BasicRelationship relationship = new()
+                        {
+                            Id = id,
+                            SourceId = parentId.ToString(),
+                            TargetId = childId.ToString(),
+                            Name = "isMadeUpOf"
+                        };
+
+                        try
+                        {
+                            _client.CreateOrReplaceRelationship(parentId.ToString(), id, relationship);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Error creating isMadeUpOf relationship: {parentId} {childId} {ex} {JsonConvert.SerializeObject(relationship)}");
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CreateHasValuesofRelationshipIfRequired(uint childId, uint parentId)
+        {
+            if (Ready && TwinExists(parentId))
+            {
+                // serialize access to hasValuesOf relationship check and creation to avoid duplicates due to race conditions
+                lock (_containsLock)
+                {
+                    try
+                    {
+                        bool relationshipExists = false;
+
+                        Pageable<BasicRelationship> existingRelationships = _client.GetRelationships<BasicRelationship>(parentId.ToString());
+
+                        foreach (BasicRelationship existingRelationship in existingRelationships)
+                        {
+                            if ((existingRelationship.TargetId == childId.ToString()) && (existingRelationship.Name == "hasValuesOf"))
+                            {
+                                relationshipExists = true;
+                                break;
+                            }
+                        }
+
+                        if (!relationshipExists)
+                        {
+                            throw new RequestFailedException("Relationship doesn't exist!");
+                        }
+                    }
+                    catch (RequestFailedException)
+                    {
+                        string id = Guid.NewGuid().ToString();
+                        BasicRelationship relationship = new()
+                        {
+                            Id = id,
+                            SourceId = parentId.ToString(),
+                            TargetId = childId.ToString(),
+                            Name = "hasValuesOf"
+                        };
+
+                        try
+                        {
+                            _client.CreateOrReplaceRelationship(parentId.ToString(), id, relationship);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError($"Error creating hasValuesOf relationship: {parentId} {childId} {ex} {JsonConvert.SerializeObject(relationship)}");
+                        }
+                    }
+                }
+            }
+        }
+
         private bool TwinExists(uint id)
         {
             try
@@ -387,7 +560,7 @@ namespace UACloudTwin
 
         private bool CreateTwinIfRequired(BasicDigitalTwin metaData, uint id, uint parentId)
         {
-            if (_modelsUploaded)
+            if (Ready)
             {
                 // create only if it doesn't exist yet
                 if (!TwinExists(id))
@@ -412,7 +585,21 @@ namespace UACloudTwin
 
                 if (parentId != 0)
                 {
-                    CreateContainsRelationshipIfRequired(id, parentId);
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+                    {
+                        if (metaData.Metadata.ModelId.Contains("dtmi:digitaltwins:opcua:node:"))
+                        {
+                            CreateHasValuesofRelationshipIfRequired(id, parentId);
+                        }
+                        else
+                        {
+                            CreateIsMadeUpofRelationshipIfRequired(id, parentId);
+                        }
+                    }
+                    else
+                    {
+                        CreateContainsRelationshipIfRequired(id, parentId);
+                    }
                 }
 
                 return true;

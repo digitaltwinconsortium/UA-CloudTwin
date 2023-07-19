@@ -1,0 +1,25 @@
+{
+  "@context": "dtmi:dtdl:context;2",
+  "@id": "dtmi:digitaltwins:opcua:node:datetime;1",
+  "@type": "Interface",
+  "displayName": "OPC UA Node for date and time data",
+  "description": "An OPC UA Node of type date and time within an OPC UA namespace within an OPC UA server.",
+  "extends": [ "dtmi:digitaltwins:isa95:EquipmentProperty;1" ],
+  "contents": [
+    {
+      "@type": "Property",
+      "name": "OPCUADisplayName",
+      "schema": "string"
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANodeId",
+      "schema": "string"
+    },
+    {
+      "@type": "Property",
+      "name": "OPCUANodeValue",
+      "schema": "dateTime"
+    }
+  ]
+}
