@@ -48,7 +48,14 @@ namespace UACloudTwin
 
             services.AddSingleton<IMessageProcessor, UAPubSubMessageProcessor>();
 
-            services.AddSingleton<IDigitalTwinClient, ADTClient>();
+            if (!string.IsNullOrEmpty(Configuration["USE_ADX"]))
+            {
+                services.AddSingleton<IDigitalTwinClient, ADXClient>();
+            }
+            else
+            {
+                services.AddSingleton<IDigitalTwinClient, ADTClient>();
+            }
 
             if (!string.IsNullOrEmpty(Configuration["USE_MQTT"]))
             {

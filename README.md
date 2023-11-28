@@ -46,6 +46,9 @@ The following environment variables **can optionally** be defined:
 * PROCESS_TELEMETRY_MESSAGES - set to 1 to process OPC UA telemetry messages in addition to processing OPC UA metadata messages
 * ADT_HOSTNAME - the hostname of the Azure Digital Twins instance UA Cloud Twin should connect to
 * USE_ISA95_EQUIPMENT_MODELS - Use the ISA95 equipment models (equipment and equipment property) for the mapping from OPC UA metadata to ISA95
+* USE_ADX - Use Azure Data Explorer for storing the digital twin graph instead of Azure Digital Twins service
+* ADX_INSTANCE_URL - URL of ADX cluster
+* ADX_DB_NAME - ADX database name
 
 Alternatively, if an Azure IoT Hub or Azure Event Hubs are used for the broker, the Azure Event Hub connection string can be specified in the UI to avoid the need to specify the above environment variables. The Azure Event Hub connection string can be read in the Azure Portal for IoT Hub under Built-in Endpoints -> Event Hub-compatible endpoint and for Azure Event Hubs under Shared Access Policies -> RootManageSharedAccessKey -> Connection string-primary key.
 

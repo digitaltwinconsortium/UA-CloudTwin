@@ -2,7 +2,7 @@
  * Copyright (c) 2005-2021 The OPC Foundation, Inc. All rights reserved.
  *
  * OPC Foundation MIT License 1.00
- * 
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -11,7 +11,7 @@
  * copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following
  * conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -65,7 +65,7 @@ namespace Opc.Ua.PubSub.Encoding
         /// <summary>
         /// Create new instance of UadpNetworkMessage
         /// </summary>
-        /// <param name="writerGroupConfiguration">The <see cref="WriterGroupDataType"/> conflagration object that produced this message.</param> 
+        /// <param name="writerGroupConfiguration">The <see cref="WriterGroupDataType"/> conflagration object that produced this message.</param>
         /// <param name="uadpDataSetMessages"><see cref="UadpDataSetMessage"/> list as input</param>
         public UadpNetworkMessage(WriterGroupDataType writerGroupConfiguration, List<UadpDataSetMessage> uadpDataSetMessages)
             : base(writerGroupConfiguration, uadpDataSetMessages?.ConvertAll<UaDataSetMessage>(x => (UaDataSetMessage)x) ?? new List<UaDataSetMessage>())
@@ -114,7 +114,7 @@ namespace Opc.Ua.PubSub.Encoding
         #region Properties
 
         /// <summary>
-        /// NetworkMessageContentMask contains the mask that will be used to check NetworkMessage options selected for usage  
+        /// NetworkMessageContentMask contains the mask that will be used to check NetworkMessage options selected for usage
         /// </summary>
         public UadpNetworkMessageContentMask NetworkMessageContentMask { get; private set; }
 
@@ -130,7 +130,7 @@ namespace Opc.Ua.PubSub.Encoding
         }
 
         /// <summary>
-        /// Get the UADP network message discovery type 
+        /// Get the UADP network message discovery type
         /// </summary>
         public UADPNetworkMessageDiscoveryType UADPDiscoveryType
         {
@@ -186,7 +186,7 @@ namespace Opc.Ua.PubSub.Encoding
             get { return m_publisherId; }
             set
             {
-                // Just in case value is a positive signed Integer 
+                // Just in case value is a positive signed Integer
                 // Try to bring it to an accepted type (will overflow if value doesn't fit)
 
                 object adjustedValue = value;
@@ -371,7 +371,7 @@ namespace Opc.Ua.PubSub.Encoding
         /// <param name="stream">The stream to use.</param>
         public override void Encode(IServiceMessageContext messageContext, Stream stream)
         {
-            using (BinaryEncoder encoder = new BinaryEncoder(stream, messageContext))
+            using (BinaryEncoder encoder = new BinaryEncoder(stream, messageContext, false))
             {
                 if (m_uadpNetworkMessageType == UADPNetworkMessageType.DataSetMessage)
                 {
@@ -409,7 +409,7 @@ namespace Opc.Ua.PubSub.Encoding
         }
 
         /// <summary>
-        /// Decodes the message 
+        /// Decodes the message
         /// </summary>
         /// <param name="context"></param>
         /// <param name="message"></param>
@@ -482,20 +482,20 @@ namespace Opc.Ua.PubSub.Encoding
         }
 
         /// <summary>
-        /// Encodes the NetworkMessage as a DiscoveryResponse of DataSetMetaData Type 
+        /// Encodes the NetworkMessage as a DiscoveryResponse of DataSetMetaData Type
         /// </summary>
         /// <param name="binaryEncoder"></param>
         private void EncodeDataSetMetaData(BinaryEncoder binaryEncoder)
         {
             binaryEncoder.WriteUInt16("DataSetWriterId", DataSetWriterId);
-            
+
             if (m_metadata == null)
             {
                 Utils.Trace("The UADP DiscoveryResponse DataSetMetaData message cannot be encoded: The MetaData property is missing. Value null will be used.");
             }
             binaryEncoder.WriteEncodeable("MetaData", m_metadata, typeof(DataSetMetaDataType));
 
-            // temporary write StatusCode.Good 
+            // temporary write StatusCode.Good
             binaryEncoder.WriteStatusCode("StatusCode", StatusCodes.Good);
         }
 
@@ -647,12 +647,12 @@ namespace Opc.Ua.PubSub.Encoding
             ExtendedFlags1 = ExtendedFlags1EncodingMask.Security | ExtendedFlags1EncodingMask.ExtendedFlags2;
             ExtendedFlags2 = ExtendedFlags2EncodingMask.NetworkMessageWithDiscoveryResponse;
 
-            // enable encoding of PublisherId in message header 
+            // enable encoding of PublisherId in message header
             NetworkMessageContentMask = UadpNetworkMessageContentMask.PublisherId;
         }
 
         /// <summary>
-        /// Set All flags before encode/decode for a NetworkMessage that contains A DiscoveryRequest 
+        /// Set All flags before encode/decode for a NetworkMessage that contains A DiscoveryRequest
         /// </summary>
         private void SetFlagsDiscoveryRequest()
         {
@@ -671,8 +671,8 @@ namespace Opc.Ua.PubSub.Encoding
 
 
         /// <summary>
-        /// Decode the stream from decoder parameter and produce a Dataset 
-        /// </summary> 
+        /// Decode the stream from decoder parameter and produce a Dataset
+        /// </summary>
         /// <param name="binaryDecoder"></param>
         /// <param name="dataSetReaders"></param>
         /// <returns></returns>
@@ -763,7 +763,7 @@ namespace Opc.Ua.PubSub.Encoding
                         uadpDataSetMessages.Add(new UadpDataSetMessage());
                     }
 
-                    // 6.2 Decode payload into DataSets 
+                    // 6.2 Decode payload into DataSets
                     // Restore the encoded fields (into dataset for now) for each possible dataset reader
                     foreach (UadpDataSetMessage uadpDataSetMessage in uadpDataSetMessages)
                     {
@@ -807,7 +807,7 @@ namespace Opc.Ua.PubSub.Encoding
                     m_uaDataSetMessages.Clear();
                     m_uaDataSetMessages.AddRange(dataSetMessages);
                 }
-                
+
             }
             catch (Exception ex)
             {
@@ -825,7 +825,7 @@ namespace Opc.Ua.PubSub.Encoding
             DataSetWriterId = binaryDecoder.ReadUInt16("DataSetWriterId");
             m_metadata = binaryDecoder.ReadEncodeable("MetaData", typeof(DataSetMetaDataType)) as DataSetMetaDataType;
 
-            // temporary write StatusCode.Good 
+            // temporary write StatusCode.Good
             StatusCode statusCode = binaryDecoder.ReadStatusCode("StatusCode");
             Utils.Trace("DecodeMetaDataMessage returned: " + statusCode.ToString());
         }
@@ -975,7 +975,7 @@ namespace Opc.Ua.PubSub.Encoding
         }
 
         /// <summary>
-        /// Encode security header 
+        /// Encode security header
         /// </summary>
         /// <param name="encoder"></param>
         private void EncodeSecurityHeader(BinaryEncoder encoder)
@@ -1006,7 +1006,7 @@ namespace Opc.Ua.PubSub.Encoding
             if (DataSetMessages.Count > 1
                 && (NetworkMessageContentMask & UadpNetworkMessageContentMask.PayloadHeader) != 0)
             {
-                //skip 2 * dataset count for each dataset payload size 
+                //skip 2 * dataset count for each dataset payload size
                 encoder.Position += 2 * DataSetMessages.Count;
             }
             //encode dataset message payload
@@ -1050,7 +1050,7 @@ namespace Opc.Ua.PubSub.Encoding
 
         #endregion
 
-        #region Private Methods - Decoding 
+        #region Private Methods - Decoding
 
         /// <summary>
         /// Encode Network Message Header
@@ -1237,7 +1237,7 @@ namespace Opc.Ua.PubSub.Encoding
             if (binaryDecoder != null)
             {
                 int offset = 0;
-                // set start position of dataset message in binary stream 
+                // set start position of dataset message in binary stream
                 foreach (UadpDataSetMessage uadpDataSetMessage in DataSetMessages)
                 {
                     uadpDataSetMessage.StartPositionInStream = binaryDecoder.Position + offset;
@@ -1247,7 +1247,7 @@ namespace Opc.Ua.PubSub.Encoding
         }
 
         /// <summary>
-        /// Decode security header 
+        /// Decode security header
         /// </summary>
         /// <param name="decoder"></param>
         private void DecodeSecurityHeader(BinaryDecoder decoder)
