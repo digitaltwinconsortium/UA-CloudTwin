@@ -124,7 +124,7 @@ namespace UACloudTwin
 
         public void UpdateAssetTelemetry(string assetName, string telemetryName, BuiltInType telemetryType, DataValue telemetryValue)
         {
-            // this is handled via ADX data ingest directly
+            // nothing to do - this is handled via ADX data ingest directly!
         }
 
         public void UploadTwinModels()
@@ -160,7 +160,18 @@ namespace UACloudTwin
                 DTDL deserializedModel = JsonConvert.DeserializeObject<DTDL>(model);
 
                 // TODO
-                Debug.WriteLine(deserializedModel.id);
+                Debug.WriteLine("DTDL ID:" + deserializedModel.id);
+
+                if (deserializedModel.contents != null)
+                {
+                    foreach (Content content in deserializedModel.contents)
+                    {
+                        if (content.schema != null)
+                        {
+                            Debug.WriteLine("Schema: " + content.schema.ToString());
+                        }
+                    }
+                }
             }
         }
 
