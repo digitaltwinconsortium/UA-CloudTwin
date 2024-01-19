@@ -31,54 +31,11 @@ namespace UACloudTwin
 
         public void AddAsset(string assetName, string uaApplicationURI, string uaNamespaceURI, string publisherName)
         {
-            ClientRequestProperties clientRequestProperties = new ClientRequestProperties()
-            {
-                ClientRequestId = Guid.NewGuid().ToString()
-            };
-
-            string query = "TODO!";
-            Dictionary<string, object> values = new();
-
-            try
-            {
-                using (IDataReader reader = _queryProvider?.ExecuteQuery(query, clientRequestProperties))
-                {
-                    while ((reader != null) && reader.Read())
-                    {
-                        for (int i = 0; i < reader.FieldCount; i++)
-                        {
-                            try
-                            {
-                                if (reader.GetValue(i) != null)
-                                {
-                                    string value = reader.GetValue(i).ToString();
-                                    if (value != null)
-                                    {
-                                        if (values.ContainsKey(value))
-                                        {
-                                            values[value] = reader.GetValue(i);
-                                        }
-                                        else
-                                        {
-                                            values.TryAdd(value, reader.GetValue(i));
-                                        }
-                                    }
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                _logger.LogError(ex.Message);
-
-                                // ignore this field and move on
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex.Message);
-            }
+            // nothing to do - this is handled via ADX data ingest directly!
+        }
+        public void UpdateAssetTelemetry(string assetName, string telemetryName, BuiltInType telemetryType, DataValue telemetryValue)
+        {
+            // nothing to do - this is handled via ADX data ingest directly!
         }
 
         public void Login(string instanceUrl)
@@ -120,11 +77,6 @@ namespace UACloudTwin
             }
         }
 
-        public void UpdateAssetTelemetry(string assetName, string telemetryName, BuiltInType telemetryType, DataValue telemetryValue)
-        {
-            // nothing to do - this is handled via ADX data ingest directly!
-        }
-
         public void UploadTwinModels()
         {
             Login(Environment.GetEnvironmentVariable("ADX_INSTANCE_URL"));
@@ -157,7 +109,6 @@ namespace UACloudTwin
             {
                 DTDL deserializedModel = JsonConvert.DeserializeObject<DTDL>(model);
 
-                // TODO
                 Debug.WriteLine("DTDL ID:" + deserializedModel.id);
 
                 if (deserializedModel.contents != null)
@@ -169,6 +120,55 @@ namespace UACloudTwin
                             Debug.WriteLine("Schema: " + content.schema.ToString());
                         }
                     }
+                }
+
+                ClientRequestProperties clientRequestProperties = new ClientRequestProperties()
+                {
+                    ClientRequestId = Guid.NewGuid().ToString()
+                };
+
+                string query = "TODO!";
+                Dictionary<string, object> values = new();
+
+                try
+                {
+                    using (IDataReader reader = _queryProvider?.ExecuteQuery(query, clientRequestProperties))
+                    {
+                        while ((reader != null) && reader.Read())
+                        {
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                try
+                                {
+                                    if (reader.GetValue(i) != null)
+                                    {
+                                        string value = reader.GetValue(i).ToString();
+                                        if (value != null)
+                                        {
+                                            if (values.ContainsKey(value))
+                                            {
+                                                values[value] = reader.GetValue(i);
+                                            }
+                                            else
+                                            {
+                                                values.TryAdd(value, reader.GetValue(i));
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex.Message);
+
+                                    // ignore this field and move on
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.Message);
                 }
             }
         }
