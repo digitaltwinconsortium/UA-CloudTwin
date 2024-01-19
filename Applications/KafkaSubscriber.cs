@@ -29,6 +29,14 @@ namespace UACloudTwin
         {
             while (true)
             {
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BROKER_NAME")) ||
+                    string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BROKER_PORT")) ||
+                    string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BROKER_USERNAME")) ||
+                    string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BROKER_PASSWORD")))
+                {
+                    break;
+                }
+
                 try
                 {
                     if ((_dataConsumer == null) || (_dataConsumer.Subscription == null)

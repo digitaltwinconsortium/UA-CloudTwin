@@ -88,21 +88,19 @@ namespace UACloudTwin
                 string tenantId = Environment.GetEnvironmentVariable("AZURE_TENANT_ID");
                 string applicationClientId = Environment.GetEnvironmentVariable("AZURE_CLIENT_ID");
                 string applicationKey = Environment.GetEnvironmentVariable("AZURE_CLIENT_SECRET");
-
-                string adxInstanceURL = Environment.GetEnvironmentVariable("ADX_INSTANCE_URL");
                 string adxDatabaseName = Environment.GetEnvironmentVariable("ADX_DB_NAME");
 
                 // acquire access to ADX token Kusto SDK
-                if (!string.IsNullOrEmpty(adxInstanceURL) && !string.IsNullOrEmpty(adxDatabaseName) && !string.IsNullOrEmpty(applicationClientId))
+                if (!string.IsNullOrEmpty(instanceUrl) && !string.IsNullOrEmpty(adxDatabaseName) && !string.IsNullOrEmpty(applicationClientId))
                 {
                     KustoConnectionStringBuilder connectionString;
                     if (!string.IsNullOrEmpty(applicationKey) && !string.IsNullOrEmpty(tenantId))
                     {
-                        connectionString = new KustoConnectionStringBuilder(adxInstanceURL.Replace("https://", string.Empty), adxDatabaseName).WithAadApplicationKeyAuthentication(applicationClientId, applicationKey, tenantId);
+                        connectionString = new KustoConnectionStringBuilder(instanceUrl.Replace("https://", string.Empty), adxDatabaseName).WithAadApplicationKeyAuthentication(applicationClientId, applicationKey, tenantId);
                     }
                     else
                     {
-                        connectionString = new KustoConnectionStringBuilder(adxInstanceURL, adxDatabaseName).WithAadUserManagedIdentity(applicationClientId);
+                        connectionString = new KustoConnectionStringBuilder(instanceUrl, adxDatabaseName).WithAadUserManagedIdentity(applicationClientId);
                     }
 
                     _queryProvider = Kusto.Data.Net.Client.KustoClientFactory.CreateCslQueryProvider(connectionString);
@@ -129,7 +127,7 @@ namespace UACloudTwin
 
         public void UploadTwinModels()
         {
-            Login(Environment.GetEnvironmentVariable("ADT_HOSTNAME"));
+            Login(Environment.GetEnvironmentVariable("ADX_INSTANCE_URL"));
 
             string baseModelsDirectory = "ISA95BaseModels";
             List<string> models = new();
