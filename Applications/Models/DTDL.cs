@@ -2,7 +2,6 @@
 namespace UACloudTwin.Models
 {
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
     using System.Collections.Generic;
 
     public class DTDL

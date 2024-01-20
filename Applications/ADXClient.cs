@@ -79,100 +79,115 @@ namespace UACloudTwin
 
         public void UploadTwinModels()
         {
-            Login(Environment.GetEnvironmentVariable("ADX_INSTANCE_URL"));
-
-            string baseModelsDirectory = "ISA95BaseModels";
-            List<string> models = new();
-
-            // read the ISA95 models from the DTC's manufacturing ontologies repo
-            HttpClient webClient = new HttpClient();
-            HttpResponseMessage responseMessage = webClient.Send(new HttpRequestMessage(HttpMethod.Get, "https://github.com/digitaltwinconsortium/ManufacturingOntologies/archive/refs/heads/main.zip"));
-            File.WriteAllBytes(Path.Combine(Directory.GetCurrentDirectory(), baseModelsDirectory + ".zip"), responseMessage.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult());
-            webClient.Dispose();
-
-            // unzip and read the models
-            ZipFile.ExtractToDirectory(baseModelsDirectory + ".zip", baseModelsDirectory, true);
-            RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95"), models);
-
-            // read our own ISA95 models
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
+            try
             {
-                RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95Equipment"), models);
-            }
-            else
-            {
-                RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models);
-            }
+                Login(Environment.GetEnvironmentVariable("ADX_INSTANCE_URL"));
 
-            // upload the models
-            foreach (string model in models)
-            {
-                DTDL deserializedModel = JsonConvert.DeserializeObject<DTDL>(model);
+                string baseModelsDirectory = "ISA95BaseModels";
+                List<string> models = new();
 
-                Debug.WriteLine("DTDL ID:" + deserializedModel.id);
+                // read the ISA95 models from the DTC's manufacturing ontologies repo
+                HttpClient webClient = new HttpClient();
+                HttpResponseMessage responseMessage = webClient.Send(new HttpRequestMessage(HttpMethod.Get, "https://github.com/digitaltwinconsortium/ManufacturingOntologies/archive/refs/heads/main.zip"));
+                File.WriteAllBytes(Path.Combine(Directory.GetCurrentDirectory(), baseModelsDirectory + ".zip"), responseMessage.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult());
+                webClient.Dispose();
 
-                if (deserializedModel.contents != null)
+                // unzip and read the models
+                ZipFile.ExtractToDirectory(baseModelsDirectory + ".zip", baseModelsDirectory, true);
+                RetrieveModelsFromDirectory(Path.Combine(baseModelsDirectory, "ManufacturingOntologies-main", "Ontologies", "ISA95"), models);
+
+                // read our own ISA95 models
+                if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("USE_ISA95_EQUIPMENT_MODELS")))
                 {
-                    foreach (Content content in deserializedModel.contents)
-                    {
-                        if (content.schema != null)
-                        {
-                            Debug.WriteLine("Schema: " + content.schema.ToString());
-                        }
-                    }
+                    RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95Equipment"), models);
+                }
+                else
+                {
+                    RetrieveModelsFromDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ISA95"), models);
                 }
 
-                ClientRequestProperties clientRequestProperties = new ClientRequestProperties()
-                {
-                    ClientRequestId = Guid.NewGuid().ToString()
-                };
+                // create our DTDL_models and DTDL_contents tables in ADX
+                RunADXQuery(".create table DTDL_models (type:string, id:string, context:string, displayname: string, extends: string, schema: string, description:string, comment:string )");
+                RunADXQuery(".create table DTDL_contents(type:string, id:string, name:string, displayname: string, schema: string, description:string, comment:string, target:string )");
 
-                string query = "TODO!";
-                Dictionary<string, object> values = new();
-
-                try
+                // upload the models
+                foreach (string rawmodel in models)
                 {
-                    using (IDataReader reader = _queryProvider?.ExecuteQuery(query, clientRequestProperties))
+                    DTDL model = JsonConvert.DeserializeObject<DTDL>(rawmodel);
+
+                    Debug.WriteLine("DTDL ID:" + model.id);
+                    RunADXQuery($".ingest inline into table DTDL_models <| {model.type}, {model.id}, {model.context}, {model.displayName}, {model.extends.ToArray()}, {model.schemas}, {model.description}, {model.comment}");
+
+                    if (model.contents != null)
                     {
-                        while ((reader != null) && reader.Read())
+                        foreach (Content content in model.contents)
                         {
-                            for (int i = 0; i < reader.FieldCount; i++)
+                            if (content.schema != null)
                             {
-                                try
-                                {
-                                    if (reader.GetValue(i) != null)
-                                    {
-                                        string value = reader.GetValue(i).ToString();
-                                        if (value != null)
-                                        {
-                                            if (values.ContainsKey(value))
-                                            {
-                                                values[value] = reader.GetValue(i);
-                                            }
-                                            else
-                                            {
-                                                values.TryAdd(value, reader.GetValue(i));
-                                            }
-                                        }
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    _logger.LogError(ex.Message);
-
-                                    // ignore this field and move on
-                                }
+                                Debug.WriteLine("Schema: " + content.schema.ToString());
+                                RunADXQuery($".ingest inline into table DTDL_models <| {content.type}, {content.name}, {content.displayName}, {content.schema}, {content.description}, {content.comment}, {content.target}");
                             }
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex.Message);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error uploading DTDL models to ADX: {ex.Message}");
             }
         }
 
+        private void RunADXQuery(string query)
+        {
+            ClientRequestProperties clientRequestProperties = new ClientRequestProperties()
+            {
+                ClientRequestId = Guid.NewGuid().ToString()
+            };
+
+            Dictionary<string, object> values = new();
+        
+            try
+            {
+                using (IDataReader reader = _queryProvider?.ExecuteQuery(query, clientRequestProperties))
+                {
+                    while ((reader != null) && reader.Read())
+                    {
+                        for (int i = 0; i < reader.FieldCount; i++)
+                        {
+                            try
+                            {
+                                if (reader.GetValue(i) != null)
+                                {
+                                    string value = reader.GetValue(i).ToString();
+                                    if (value != null)
+                                    {
+                                        if (values.ContainsKey(value))
+                                        {
+                                            values[value] = reader.GetValue(i);
+                                        }
+                                        else
+                                        {
+                                            values.TryAdd(value, reader.GetValue(i));
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex.Message);
+
+                                // ignore this field and move on
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.Message);
+            }
+        }
+        
         private void RetrieveModelsFromDirectory(string baseModelsDirectory, List<string> models)
         {
             EnumerationOptions options = new()
