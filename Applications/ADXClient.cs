@@ -9,7 +9,6 @@ namespace UACloudTwin
     using Kusto.Ingest;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
     using Opc.Ua;
     using System;
     using System.Collections.Generic;
@@ -23,7 +22,7 @@ namespace UACloudTwin
     using UACloudTwin.Models;
 
     // Requires
-    // .create table DTDL_models (context:string, id:string, type:string, displayname: string, description:string, comment:string, contenttype:string, contentid:string, writable:bool, schema:dynamic, stringcontentname:string, contentdisplayname: string, contentdescription:string, contentcomment:string, target:string, extends: string, schemas:string)
+    // .create table DTDL_models (context:string, id:string, type:string, displayname: string, description:string, comment:string, contenttype:string, contentid:string, writable:bool, schema:dynamic, contentname:string, contentdisplayname: string, contentdescription:string, contentcomment:string, target:string, extends: string, schemas:string)
     // to be run on ADX cluster first!
 
     public class ADXClient : IDigitalTwinClient
@@ -37,9 +36,23 @@ namespace UACloudTwin
 
         private static readonly ColumnMapping[] _jsonDTDLMapping = new ColumnMapping[]
         {
-            // TODO
-            new ColumnMapping { ColumnName = "EventText",  Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.EventText" },  { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
-            new ColumnMapping { ColumnName = "Properties", Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.Properties" }, { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "context",             Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.context" },               { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "id",                  Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.id" },                    { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "type",                Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.type" },                  { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "displayname",         Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.displayname" },           { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "description",         Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.description" },           { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "comment",             Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.comment" },               { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "contenttype",         Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.contenttype" },           { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "contentid",           Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.contentid" },             { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "writable",            Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.writable" },              { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "schema",              Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.schema" },                { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "contentname",         Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.contentname" },           { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "contentdisplayname",  Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.contentdisplayname" },    { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "contentdescription",  Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.contentdescription" },    { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "contentcomment",      Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.contentcomment" },        { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "target",              Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.target" },                { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "extends",             Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.extends" },               { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
+            new ColumnMapping { ColumnName = "schemas",             Properties = new Dictionary<string, string>{ { MappingConsts.Path, "$.schemas" },               { MappingConsts.TransformationMethod, CsvFromJsonStream_TransformationMethod.None.FastToString() } } },
         };
 
         public ADXClient(Microsoft.Extensions.Logging.ILogger<ADTClient> logger)
@@ -169,8 +182,9 @@ namespace UACloudTwin
                             };
 
                             ADXIngest(JsonConvert.SerializeObject(newModel));
+                            _logger.LogInformation("Uploaded DTDL content " + content.name + " of model " + model.id);
 
-                            if (model.extends.Count > 1)
+                            if (model.extends?.Count > 1)
                             {
                                 for (int i = 1; i < model.extends.Count; i++)
                                 {
@@ -196,6 +210,7 @@ namespace UACloudTwin
                                     };
 
                                     ADXIngest(JsonConvert.SerializeObject(newModel1));
+                                    _logger.LogInformation("Uploaded additional DTDL extend " + model.extends[i] + " of model " + model.id);
                                 }
                             }
                         }

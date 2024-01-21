@@ -2,7 +2,6 @@
 namespace UACloudTwin.Models
 {
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
     using System.Collections.Generic;
 
     public class DTDL
@@ -39,7 +38,7 @@ namespace UACloudTwin.Models
 
         public bool writable { get; set; }
 
-        public JObject schema { get; set; }
+        public object schema { get; set; }
 
         public string name { get; set; }
 
@@ -72,7 +71,7 @@ namespace UACloudTwin.Models
 
         public bool writable { get; set; }
 
-        public JObject schema { get; set; }
+        public object schema { get; set; }
 
         public string contentname { get; set; }
 
