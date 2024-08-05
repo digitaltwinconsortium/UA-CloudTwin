@@ -25,7 +25,7 @@ namespace UACloudTwin.Models
 
         public List<string> extends { get;set; }
 
-        public string schemas { get; set; }
+        public object schemas { get; set; }
     }
 
     public class Content
@@ -85,6 +85,6 @@ namespace UACloudTwin.Models
 
         public string extends { get; set; }
 
-        public string schemas { get; set; }
+        public object schemas { get; set; }
     }
 }
